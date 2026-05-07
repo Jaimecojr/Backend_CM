@@ -21,7 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'nit',
         'name',
-        'contacto',
+        'contact',
         'phone',
         'movil',
         'address',
@@ -54,7 +54,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'state' => 'boolean',
+            'state' => 'integer',
+            'type' => 'integer',
         ];
     }
 

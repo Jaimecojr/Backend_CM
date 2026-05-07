@@ -14,7 +14,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('city')->get();
+        $users = User::with(['city:id,name,department_id'])->get();
 
         if ($users->isEmpty()) {
             return response()->json([
@@ -35,7 +35,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nit' => 'required|string|max:100|unique:users,nit',
+            'nit' => 'required|regex:/^\d+$/|max:100|unique:users,nit',
             'name' => 'required|string|max:100',
             'contact' => 'nullable|string|max:100',
             'phone' => 'nullable|string|max:50',
@@ -45,9 +45,9 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'user' => 'required|string|max:100|unique:users,user',
             'password' => 'required|string|min:6',
-            'state' => 'nullable|boolean',
+            'state' => 'nullable|in:1,2',
             'city_id' => 'required|exists:cities,id',
-            'type' => 'required|in:1,2,3',
+            'type' => 'nullable|in:1,2,3',
         ]);
 
         if ($validator->fails()) {
@@ -68,9 +68,9 @@ class UserController extends Controller
             'email' => $request->email,
             'user' => $request->user,
             'password' => Hash::make($request->password),
-            'state' => $request->state ?? true,
+            'state' => $request->state ?? 1,
             'city_id' => $request->city_id,
-            'type' => $request->type,
+            'type' => $request->type ?? 2,
         ]);
 
         return response()->json([
@@ -84,7 +84,7 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        $user = User::with('city')->find($id);
+        $user = User::with(['city:id,name,department_id'])->find($id);
 
         if (!$user) {
             return response()->json([
@@ -112,7 +112,7 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nit' => 'nullable|string|max:100|unique:users,nit,' . $id,
+            'nit' => 'nullable|regex:/^\d+$/|max:100|unique:users,nit,' . $id,
             'name' => 'nullable|string|max:100',
             'contact' => 'nullable|string|max:100',
             'phone' => 'nullable|string|max:50',
@@ -122,7 +122,7 @@ class UserController extends Controller
             'email' => 'nullable|email|unique:users,email,' . $id,
             'user' => 'nullable|string|max:100|unique:users,user,' . $id,
             'password' => 'nullable|string|min:6',
-            'state' => 'nullable|boolean',
+            'state' => 'nullable|in:1,2',
             'city_id' => 'nullable|exists:cities,id',
             'type' => 'nullable|in:1,2,3',
         ]);
@@ -134,19 +134,32 @@ class UserController extends Controller
             ], 400);
         }
 
-        if ($request->filled('nit')) $user->nit = $request->nit;
-        if ($request->filled('name')) $user->name = $request->name;
-        if ($request->filled('contact')) $user->contact = $request->contact;
-        if ($request->filled('phone')) $user->phone = $request->phone;
-        if ($request->filled('movil')) $user->movil = $request->movil;
-        if ($request->filled('address')) $user->address = $request->address;
-        if ($request->filled('date_afi')) $user->date_afi = $request->date_afi;
-        if ($request->filled('email')) $user->email = $request->email;
-        if ($request->filled('user')) $user->user = $request->user;
-        if ($request->filled('password')) $user->password = Hash::make($request->password);
-        if ($request->filled('state')) $user->state = $request->state;
-        if ($request->filled('city_id')) $user->city_id = $request->city_id;
-        if ($request->filled('type')) $user->type = $request->type;
+        if ($request->filled('nit'))
+            $user->nit = $request->nit;
+        if ($request->filled('name'))
+            $user->name = $request->name;
+        if ($request->filled('contact'))
+            $user->contact = $request->contact;
+        if ($request->filled('phone'))
+            $user->phone = $request->phone;
+        if ($request->filled('movil'))
+            $user->movil = $request->movil;
+        if ($request->filled('address'))
+            $user->address = $request->address;
+        if ($request->filled('date_afi'))
+            $user->date_afi = $request->date_afi;
+        if ($request->filled('email'))
+            $user->email = $request->email;
+        if ($request->filled('user'))
+            $user->user = $request->user;
+        if ($request->filled('password'))
+            $user->password = Hash::make($request->password);
+        if ($request->filled('state'))
+            $user->state = $request->state;
+        if ($request->filled('city_id'))
+            $user->city_id = $request->city_id;
+        if ($request->filled('type'))
+            $user->type = $request->type;
 
         $user->save();
 
@@ -174,5 +187,19 @@ class UserController extends Controller
         return response()->json([
             'message' => 'Usuario eliminado correctamente',
         ], 200);
+    }
+
+    public function activeFranchises()    {
+        $users = User::where('state', 1)
+            ->where('id', '>', 2)
+            ->whereNot('type', 1)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'message' => 'Franquicias activas obtenidas correctamente',
+            'data' => $users,
+        ], 200);    
     }
 }

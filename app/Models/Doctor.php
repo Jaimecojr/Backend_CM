@@ -14,6 +14,7 @@ class Doctor extends Model
         'state',
         'name',
         'lastname',
+        'email',
         'phone',
         'movil',
         'address',
@@ -34,5 +35,11 @@ class Doctor extends Model
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    // un doctor pertenece a una ciudad
+    public function city()
+    {
+        return $this->belongsTo(City::class);
     }
 }
