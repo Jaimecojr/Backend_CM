@@ -51,8 +51,8 @@ class CarnetController extends Controller
             return response()->json(['message' => 'Error al generar el carnet'], 500);
         }
 
-        $recipient      = '57' . $affiliate->movil;
-        $pdfUrl         = config('app.url') . '/storage/' . $relativePath;
+        $recipient = '57' . $affiliate->movil;
+        $pdfUrl    = config('app.url') . '/storage/' . $relativePath;
         $nombreCompleto = strtoupper($affiliate->name . ' ' . $affiliate->lastname);
 
         $payload = [
@@ -101,6 +101,7 @@ class CarnetController extends Controller
             'response'     => json_encode($responseData),
             'recipient_id' => $recipient,
             'deleted'      => 0,
+            'type'         => 'carnet',
         ]);
 
         if (!empty($responseData['messages'][0]['id'])) {
@@ -129,96 +130,104 @@ class CarnetController extends Controller
         $pdf->setSourceFile(resource_path('pdf/carnet.pdf'));
         $tplId = $pdf->importPage(1);
         $size  = $pdf->getTemplateSize($tplId);
+        $W     = $size['width'];
+        $H     = $size['height'];
 
-        $pdf->AddPage('P', [$size['width'], $size['height']]);
-        $pdf->useTemplate($tplId, 0, 0, $size['width'], $size['height'], true);
+        $pdf->AddPage('P', [$W, $H]);
+        $pdf->useTemplate($tplId, 0, 0, $W, $H, true);
 
-        // Título
-        $pdf->SetFont('helvetica', 'B', 9);
+        // Factor de escala x: referencia Zend usaba página de 595pt (A4 = 210mm)
+        $sx = $W / 210.0;
+
+        // CREDENCIAL AFILIADO — ref: x=70, y=670, 26pt, rojo
+        $pdf->SetFont('helvetica', 'B', 26);
         $pdf->SetTextColor(231, 60, 60);
-        $pdf->SetXY(22, 55);
-        $pdf->Cell(0, 0, 'C  R  E  D  E  N  C  I  A  L    A  F  I  L  I  A  D  O');
+        $pdf->SetXY(0, 180);
+        $pdf->Cell($W, 0, 'C  R  E  D  E  N  C  I  A  L    A  F  I  L  I  A  D  O', 0, 0, 'C');
 
-        // Nombre completo
-        $pdf->SetFont('helvetica', 'B', 8);
+        // NOMBRE — ref: x=170, y=610 (670-60), 24pt, negro
+        $pdf->SetFont('helvetica', 'B', 24);
         $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetXY(55, 72);
-        $pdf->Cell(0, 0, $this->enc(strtoupper($affiliate->name . ' ' . $affiliate->lastname)));
+        $nameText = mb_strtoupper($affiliate->name . ' ' . $affiliate->lastname, 'UTF-8');
+        $nameW    = $pdf->GetStringWidth($nameText);
+        $pdf->SetXY(($W - $nameW) / 2, 200);
+        $pdf->Cell(0, 0, $nameText);
 
-        // Cédula
-        $pdf->SetXY(57, 80);
-        $pdf->Cell(0, 0, 'CC.  ' . $affiliate->id_card);
+        // CÉDULA — centrada igual que el nombre
+        $ccText = 'CC. ' . $affiliate->id_card;
+        $ccW    = $pdf->GetStringWidth($ccText);
+        $pdf->SetXY(($W - $ccW) / 2, 210);
+        $pdf->Cell(0, 0, $ccText);
 
-        // Beneficiarios label
-        $pdf->SetFont('helvetica', 'B', 7);
+        // BENEFICIARIOS label — ref: x=70, y=520 (580-60), 22pt, rojo
+        $pdf->SetFont('helvetica', 'B', 22);
         $pdf->SetTextColor(231, 60, 60);
-        $pdf->SetXY(22, 95);
+        $pdf->SetXY(24.7 * $sx, 240);
         $pdf->Cell(0, 0, 'BENEFICIARIOS');
 
-        // Lista de beneficiarios
+        // LISTA BENEFICIARIOS — ref: x=70, y=480 (520-40), paso 25pt=8.8mm, 22pt
+        $pdf->SetFont('helvetica', 'B', 22);
         $pdf->SetTextColor(0, 0, 0);
-        $yBene = 107;
+        $yBene = 255;
         foreach ($affiliate->beneficiaries as $bene) {
-            $pdf->SetXY(22, $yBene);
-            $pdf->Cell(0, 0, $this->enc(strtoupper($bene->name)));
-            $yBene += 8;
+            $pdf->SetXY(24.7 * $sx, $yBene);
+            $pdf->Cell(0, 0, mb_strtoupper($bene->name, 'UTF-8'));
+            $yBene += 8.8;
         }
 
-        // Válido hasta
+        // VÁLIDO HASTA — ref: x=486, y=210, 22pt, azul
         $meses = [
             1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO',    4 => 'ABRIL',
             5 => 'MAYO',  6 => 'JUNIO',   7 => 'JULIO',    8 => 'AGOSTO',
             9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE',
         ];
-        $xMes = [
-            'ENERO' => 165, 'MARZO' => 165,
-            'FEBRERO' => 155, 'OCTUBRE' => 155,
-            'ABRIL' => 170, 'MAYO' => 170,
-            'JUNIO' => 168, 'JULIO' => 168,
-            'AGOSTO' => 158, 'SEPTIEMBRE' => 143,
-            'NOVIEMBRE' => 147, 'DICIEMBRE' => 149,
-        ];
 
-        $mes  = $meses[(int) date('n', strtotime($affiliate->validity_end))];
-        $anio = date('d/y', strtotime($affiliate->validity_end));
+        $mesNum = (int) date('n', strtotime($affiliate->validity_end));
+        $mes    = $meses[$mesNum];
+        $anio   = date('d/y', strtotime($affiliate->validity_end));
 
-        $pdf->SetFont('helvetica', 'B', 7);
+        $xValido = 140 * $sx;
+
+        $pdf->SetFont('helvetica', 'B', 20);
         $pdf->SetTextColor(38, 198, 218);
-        $pdf->SetXY(152, 255);
-        $pdf->Cell(0, 0, $this->enc('VÁLIDO HASTA'));
+        $pdf->SetXY($xValido, 330);
+        $pdf->Cell(0, 0, 'VÁLIDO HASTA');
 
+        $pdf->SetFont('helvetica', 'B', 20);
         $pdf->SetTextColor(231, 60, 60);
-        $pdf->SetXY($xMes[$mes] ?? 145, 263);
+        $pdf->SetXY($xValido, 340);
         $pdf->Cell(0, 0, $mes);
-        $pdf->SetXY(195, 263);
+        $xAnio = $xValido + $pdf->GetStringWidth($mes) + 8;
+        $pdf->SetXY($xAnio, 340);
         $pdf->Cell(0, 0, $anio);
 
-        // Franquicias en 3 columnas
-        $pdf->SetFont('helvetica', 'B', 6);
+        // FRANQUICIAS — ref: 20pt, x dinámico desde x=5, 3 por fila, paso 25pt=8.8mm
+        $pdf->SetFont('helvetica', 'B', 18);
         $pdf->SetTextColor(0, 0, 0);
 
-        $colWidth = 68;
-        $xFran    = 2;
-        $yFran    = 285;
+        $franArr = $franchises->all();
+        $total   = count($franArr);
+        $yFran   = 385;
+        $xFran   = 1.76 * $sx;   // ref x=5pt
 
-        foreach ($franchises as $i => $fran) {
-            $texto = $this->enc(strtoupper($fran->name)) . ' ' . $fran->movil;
+        foreach ($franArr as $key => $fran) {
+            $isLast     = ($key === $total - 1);
+            $endOfRow   = (($key + 1) % 3 === 0);
+            $sep        = (!$isLast && !$endOfRow) ? ' -' : '';
+
+            $nameStr    = mb_strtoupper($fran->name, 'UTF-8');
+            $displayStr = $nameStr . ' ' . $fran->movil . $sep;
             $pdf->SetXY($xFran, $yFran);
-            $pdf->Cell($colWidth, 0, $texto, 0, 0);
+            $pdf->Cell(0, 0, $displayStr);
 
-            if (($i + 1) % 3 === 0) {
-                $xFran = 2;
-                $yFran += 8;
-            } else {
-                $xFran += $colWidth;
+            $xFran += $pdf->GetStringWidth($displayStr) + 5;
+
+            if ($endOfRow && !$isLast) {
+                $xFran = 1.76 * $sx;
+                $yFran += 8.8;
             }
         }
 
         $pdf->Output($savePath, 'F');
-    }
-
-    private function enc(string $text): string
-    {
-        return iconv('UTF-8', 'windows-1252//TRANSLIT//IGNORE', $text) ?: $text;
     }
 }

@@ -10,8 +10,9 @@ class WhatsappMessage extends Model
     use HasFactory;
 
     protected $fillable = [
-        'response', 
-        'recipient_id', 
-        'deleted'
+        'response',
+        'recipient_id',
+        'deleted',
+        'type',
     ];
 }

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -23,12 +24,31 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        // Crear departamento y ciudad mínimos para satisfacer la FK city_id
+        $departmentId = DB::table('departments')->insertGetId([
+            'name'       => fake()->state(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $cityId = DB::table('cities')->insertGetId([
+            'department_id' => $departmentId,
+            'name'          => fake()->city(),
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'nit'               => fake()->unique()->numerify('##########'),
+            'name'              => fake()->name(),
+            'email'             => fake()->unique()->safeEmail(),
+            'user'              => fake()->unique()->userName(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'password'          => static::$password ??= Hash::make('password'),
+            'remember_token'    => Str::random(10),
+            'state'             => 1,
+            'city_id'           => $cityId,
+            'type'              => 2,
         ];
     }
 

@@ -41,4 +41,16 @@ class Appointment extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // afi_code apunta al afiliado titular (type = 1)
+    public function affiliate()
+    {
+        return $this->belongsTo(Affiliate::class, 'afi_code');
+    }
+
+    // afi_code apunta al beneficiario (type = 2)
+    public function beneficiary()
+    {
+        return $this->belongsTo(Beneficiary::class, 'afi_code');
+    }
 }

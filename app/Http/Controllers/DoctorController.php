@@ -20,7 +20,7 @@ class DoctorController extends Controller
         $query = Doctor::with([
             'specialty:id,name',
             'city:id,name,department_id'
-        ]);
+        ])->select('doctors.*');
 
         if ($request->has('state') && in_array($request->state, [1, 2])) {
             $query->where('state', $request->state);
@@ -33,9 +33,8 @@ class DoctorController extends Controller
         if ($request->filled('city_id')) {
             $query->where('city_id', $request->city_id);
         } elseif ($request->filled('department_id')) {
-            $query->whereHas('city', function($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
+            $query->leftJoin('cities as dept_city', 'dept_city.id', '=', 'doctors.city_id')
+                  ->where('dept_city.department_id', $request->department_id);
         }
 
         if ($request->filled('search')) {
@@ -62,6 +61,32 @@ class DoctorController extends Controller
     }
 
     /**
+     * Médicos activos filtrados por especialidad — para el selector de citas.
+     * Sin paginación, sin cargar specialty, solo los campos necesarios.
+     */
+    public function bySpecialty(Request $request)
+    {
+        $specialtyId = (int) $request->query('specialty_id', 0);
+
+        if (!$specialtyId) {
+            return response()->json(['message' => 'Parámetro specialty_id requerido.', 'data' => []], 422);
+        }
+
+        $doctors = Doctor::select(['id', 'name', 'lastname', 'address', 'city_id', 'value_agreement', 'movil'])
+            ->with('city:id,name')
+            ->where('state', 1)
+            ->where('specialty_id', $specialtyId)
+            ->orderBy('name')
+            ->orderBy('lastname')
+            ->get();
+
+        return response()->json([
+            'message' => 'Médicos obtenidos correctamente.',
+            'data'    => $doctors,
+        ]);
+    }
+
+    /**
      * Listado público para el sitio web — solo médicos activos, sin datos internos.
      */
     public function publicIndex(Request $request)
@@ -71,7 +96,7 @@ class DoctorController extends Controller
         $query = Doctor::with([
             'specialty:id,name',
             'city:id,name',
-        ])->where('state', 1);
+        ])->select('doctors.*')->where('state', 1);
 
         if ($request->filled('specialty_id')) {
             $query->where('specialty_id', $request->specialty_id);
@@ -80,9 +105,8 @@ class DoctorController extends Controller
         if ($request->filled('city_id')) {
             $query->where('city_id', $request->city_id);
         } elseif ($request->filled('department_id')) {
-            $query->whereHas('city', function ($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
+            $query->leftJoin('cities as dept_city', 'dept_city.id', '=', 'doctors.city_id')
+                  ->where('dept_city.department_id', $request->department_id);
         }
 
         if ($request->filled('search')) {

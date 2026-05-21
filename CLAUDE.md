@@ -36,7 +36,37 @@ Para catálogos simples o con pocos registros (asesores, convenios, franquicias)
   - `message`: Mensaje de éxito.
   - `data`: Array de items en crudo (`$items`).
 
+### 3. Búsqueda en relaciones: `leftJoin` en lugar de `orWhereHas`
+Cuando la búsqueda cruza una relación (ej. buscar por nombre del médico asociado a una cita), **nunca usar `orWhereHas`** — genera una subconsulta correlacionada por cada fila y es muy lento.
+
+Usar siempre `leftJoin` + `select('tabla_principal.*')`:
+```php
+$query = Modelo::with([...])->select('appointments.*');
+
+if ($search) {
+    $query->leftJoin('doctors as srch_doc', 'srch_doc.id', '=', 'appointments.doctor_id')
+          ->where(function ($q) use ($search) {
+              $q->where('appointments.name', 'like', "%{$search}%")
+                ->orWhere('srch_doc.name', 'like', "%{$search}%")
+                ->orWhere('srch_doc.lastname', 'like', "%{$search}%");
+          });
+}
+```
+- El `leftJoin` solo se aplica cuando hay búsqueda activa para no afectar consultas normales.
+- El alias en el join (`srch_doc`) evita colisión de nombres con el eager load que también usa `doctors`.
+- El `select('appointments.*')` es obligatorio cuando hay joins para evitar que columnas del join sobreescriban campos del modelo principal.
+
 ## Lógica de Negocio Específica
+
+**Citas (`appointments`):**
+- `type`: `1` = titular (afiliado), `2` = beneficiario.
+- `afi_code`: código del afiliado titular cuando `type = 1`; código del beneficiario cuando `type = 2`.
+- `owner`: campo calculado en backend — `affiliate` si `type = 1`, `beneficiary` si `type = 2`. Se normaliza en `index()` y `show()` antes de retornar; nunca se persiste.
+- **Filtro de período:** acepta param `period` (`pending` = `date >= hoy`, `past` = `date < hoy`, `all` = sin filtro). Default `pending`. Si se recibe `date` (fecha exacta), ignora `period`.
+- **Ordenamiento por período:** `pending` → ascendente (las más próximas primero); `past` y `all` → descendente.
+- **Qué NO cargar en `index()`:** la relación `user` no se muestra en la tabla del listado — omitirla del `with()` ahorra una query por página. Solo cargar `doctor`, `city`, `affiliate`, `beneficiary`.
+- **Índice en `date`:** crítico para que los filtros de período sean eficientes.
+
 **Afiliados (`affiliates`):**
 - `validity`: Fecha inicial del afiliado. Es **inmutable**; no se actualiza al editar el registro, ya que sirve para la auditoría de antigüedad.
 - `validity_end`: Fecha de vencimiento. Solo se actualiza mediante renovaciones.
@@ -74,11 +104,11 @@ El sistema automatiza el cambio de estado de afiliados vencidos mediante el sche
 - Esto actúa como **respaldo de backend**: el frontend también envía `stade = 1` al renovar, pero esta lógica cubre el caso de llamadas directas al endpoint de renovaciones.
 - **No** se debe reactivar el afiliado solo por editarlo — solo la renovación (o el toggle manual) debe cambiar `stade`.
 
-### Configuración en producción (Railway)
-Para que el scheduler funcione en Railway se debe agregar un **Cron Job** en el servicio:
+### Configuración en producción
+Para que el scheduler funcione en producción se debe configurar un **Cron Job** en el servidor:
 - **Comando:** `php artisan schedule:run`
 - **Intervalo:** `* * * * *` (cada minuto — Laravel decide internamente qué tareas correr en ese momento)
-- En Railway: Settings del servicio → Cron Jobs → agregar el comando con ese schedule.
+- Agregar el cron job en el panel del servidor apuntando al PHP del proyecto.
 - Sin este cron configurado, el comando `affiliates:update-expired` nunca se ejecutará automáticamente.
 
 ## Rutas Públicas (Sitio Web)
@@ -104,6 +134,30 @@ GET /api/public/departments/{department}/cities → CityController@getByDepartme
 ### Por qué no reutilizar los endpoints privados
 Mover rutas privadas fuera del grupo `auth:sanctum` expone todos sus campos (incluyendo datos internos sensibles) a cualquier visitante. El patrón `publicIndex` es más seguro porque controla explícitamente qué se devuelve, independientemente de cambios futuros al método privado.
 
+## Integración WhatsApp Cloud API
+
+### Tabla `whatsapp_messages`
+Registra todos los envíos de WhatsApp del sistema. Columna `type` distingue el origen:
+- `'carnet'` → envío de carnet de afiliado (`CarnetController`)
+- `'cita'` → notificación de cita médica (`AppointmentController`)
+
+Siempre se registra el resultado, tanto si fue exitoso como si falló.
+
+### Configuración (`settings`)
+Todos los parámetros WA viven en la tabla `settings` (singleton — siempre hay una sola fila):
+- `wa_api_version`: versión de la Graph API (ej. `v18.0`)
+- `wa_phone_number_id`: ID del número de teléfono en Meta
+- `wa_bearer_token`: token de acceso — columna tipo `TEXT` (los tokens de Meta superan `varchar(255)`)
+- `wa_template_name`: nombre de la plantilla para carnets
+- `wa_appointment_template_name`: nombre de la plantilla para confirmación de citas (nullable)
+
+### Código de idioma para plantillas Meta
+**Crítico:** Spanish (COL) en Meta Business = código `es_CO`, **NO** `es`. Usar `es` da error `#132001 template does not exist in es`. Siempre usar `'language' => ['code' => 'es_CO']` en los payloads.
+
+### Consideraciones comunes a todos los envíos
+- **SSL local:** Usar `Http::withoutVerifying()` en entorno `local` para evitar error de certificado SSL de cURL en Windows. En producción verifica SSL normalmente.
+- **`wa_bearer_token`:** Validar sin `max:255` — la regla correcta es `'required|string'` (sin límite de longitud).
+
 ## Envío de Carnets por WhatsApp
 
 ### Controlador
@@ -119,20 +173,48 @@ Mover rutas privadas fuera del grupo `auth:sanctum` expone todos sus campos (inc
 4. Valida que `validity_end` no sea null — 422 si vacío
 5. Franquicias: `User::where('state', 1)->where('type', 2)->get()`
 6. Genera PDF con FPDI sobre `resources/pdf/carnet.pdf`, guarda en `storage/app/public/carnets/carnet_{id}_{timestamp}.pdf`
-7. Envía via WhatsApp Cloud API usando `Http::withToken($bearer)->post(...)` con template (`header: document`, `body: text`)
+7. Envía via WhatsApp Cloud API con template (`header: document`, `body: text`), `type = 'carnet'`
 8. Registra en `whatsapp_messages` siempre (éxito o fallo)
 9. Si `messages[0].id` en respuesta → `affiliate->carnet = 'si'`, retorna 200
 
 ### Consideraciones importantes
 - **Timestamp en filename:** Garantiza URL única en cada envío para evitar que Meta sirva versión cacheada del PDF anterior.
 - **`carnet = 'si'`** solo se actualiza si Meta confirma con `messages[0].id`. Nunca se resetea a `'no'` automáticamente.
-- **SSL local:** El controlador usa `Http::withoutVerifying()` en entorno `local` para evitar error de certificado SSL de cURL en Windows. En producción verifica SSL normalmente.
-- **URL pública del PDF:** Requiere `php artisan storage:link` activo. En Railway agregar al startup script.
-- **`wa_bearer_token`:** Columna tipo `TEXT` en la BD (los tokens de Meta son demasiado largos para `varchar(255)`).
+- **URL pública del PDF:** Requiere `php artisan storage:link` activo. Ejecutar una vez al configurar el servidor de producción.
 - **Encoding:** `enc()` convierte UTF-8 → windows-1252 con `iconv` para que TCPDF renderice tildes correctamente con fuentes estándar (Helvetica).
 
 ### Pruebas locales
 El PDF se genera en `storage/app/public/carnets/` — se puede abrir directamente para verificar coordenadas visualmente. Para probar el envío real a WhatsApp desde local, la URL del PDF debe ser pública (usar ngrok, no localtunnel — localtunnel muestra pantalla de bypass que Meta no puede pasar).
+
+## Notificación WhatsApp al Crear/Editar Citas
+
+### Flujo
+- **Método:** `AppointmentController::enviarNotificacionWA(Appointment $appointment): array`
+- Se llama al final de `store()` y `update()`, **después** de persistir la cita.
+- No es bloqueante: si falla el envío, la cita ya está guardada. El resultado WA se retorna en la clave `whatsapp` del JSON de respuesta.
+
+### Datos usados para el envío
+- **Teléfono:** `appointments.phone` (no el `movil` del afiliado). Se normaliza con `preg_replace('/\D/', '', ...)` y se valida que tenga exactamente 10 dígitos. Se prefija `'57'` para el destinatario.
+- **Relaciones:** `loadMissing('doctor.specialty')` para no recargar si ya estaban cargadas.
+
+### Variables de la plantilla (7 parámetros de body, categoría UTILITY)
+1. `name` — nombre del paciente en la cita
+2. fecha formateada `d/m/Y`
+3. `hour` — hora de la cita
+4. `address` — dirección de la cita
+5. especialidad del médico (`doctor.specialty.name`)
+6. nombre completo del médico (`doctor.name + doctor.lastname`)
+7. valor formateado `'$ ' . number_format($value, 0, ',', '.')`
+
+### Registro en `whatsapp_messages`
+Se registra con `type = 'cita'` siempre (éxito o fallo), para distinguirlo de los carnets en reportes futuros.
+
+### Respuesta JSON
+```json
+{ "message": "...", "data": {...}, "whatsapp": { "enviado": true } }
+// o en caso de fallo:
+{ "message": "...", "data": {...}, "whatsapp": { "enviado": false, "detalle": "..." } }
+```
 
 ## Reglas Generales
 1. **Idioma:** Los comentarios del código, nombres de variables descriptivas, strings de respuesta JSON y mensajes de validación deben estar en **español**.

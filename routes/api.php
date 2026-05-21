@@ -12,9 +12,11 @@ use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AgreementController;
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SpecialtyController;
+use App\Http\Controllers\WhatsAppWebhookController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -28,11 +30,18 @@ Route::prefix('public')->group(function () {
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
 });
 
+// Webhook WhatsApp — público, Meta lo llama directamente sin autenticación
+Route::prefix('webhook')->group(function () {
+    Route::get('whatsapp',  [WhatsAppWebhookController::class, 'verify']);
+    Route::post('whatsapp', [WhatsAppWebhookController::class, 'handle']);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Usuarios - Franquicias
     Route::get('users/active', [UserController::class, 'activeFranchises']);
     Route::apiResource('users', UserController::class);
+    Route::post('user/change-password', [UserController::class, 'changePassword']);
 
     //Vendedores
     Route::get('counselors/active', [CounselorController::class, 'activeCounselors']);
@@ -46,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     //Afiliados / Usuarios
     Route::get('affiliates/check-id-card',   [AffiliateController::class, 'checkIdCard']);
     Route::get('affiliates/expiring-today',  [AffiliateController::class, 'expiringToday']);
+    Route::get('affiliates/by-id-card',      [AffiliateController::class, 'byIdCard']);
     Route::post('affiliates/{id}/carnet',    [CarnetController::class, 'send']);
     Route::apiResource('affiliates', AffiliateController::class);
     // Notas de afiliados
@@ -63,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('specialties', SpecialtyController::class);
 
     // Médicos
+    Route::get('doctors/by-specialty', [DoctorController::class, 'bySpecialty']);
     Route::apiResource('doctors', DoctorController::class);
 
     // Departamentos (solo index)
@@ -70,6 +81,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ciudades por departamento (usa Route Model Binding Department $department)
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
+
+    // Citas
+    Route::apiResource('appointments', AppointmentController::class);
 
     // Configuración global del panel
     Route::get('settings', [SettingController::class, 'index']);

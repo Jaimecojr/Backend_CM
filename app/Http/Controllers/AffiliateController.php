@@ -286,4 +286,45 @@ class AffiliateController extends Controller
             'message' => $exists ? 'El documento de identidad ya existe' : 'Disponible',
         ], 200);
     }
+
+    /**
+     * Busca un afiliado por cédula y valida que esté vigente para crear una cita.
+     * Retorna el afiliado con sus beneficiarios si está activo y no vencido.
+     */
+    public function byIdCard(Request $request)
+    {
+        $idCard = trim((string) $request->query('id_card', ''));
+
+        if ($idCard === '') {
+            return response()->json(['message' => 'Ingresa un número de documento.'], 422);
+        }
+
+        $affiliate = Affiliate::select([
+                'id', 'name', 'lastname', 'id_card',
+                'movil', 'phone', 'stade', 'validity_end',
+            ])
+            ->with(['beneficiaries:id,affiliate_id,name,id_card'])
+            ->where('id_card', $idCard)
+            ->first();
+
+        if (!$affiliate) {
+            return response()->json(['message' => 'No se encontró un afiliado con ese documento.'], 404);
+        }
+
+        if ((int) $affiliate->stade !== 1) {
+            return response()->json(['message' => 'El afiliado se encuentra inactivo. Debe estar activo para crear una cita.'], 422);
+        }
+
+        if ($affiliate->validity_end && Carbon::parse($affiliate->validity_end)->lt(Carbon::today())) {
+            $fecha = Carbon::parse($affiliate->validity_end)->format('d/m/Y');
+            return response()->json([
+                'message' => "La vigencia del afiliado venció el {$fecha}. Debe renovar antes de crear una cita.",
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Afiliado encontrado.',
+            'data'    => $affiliate,
+        ], 200);
+    }
 }

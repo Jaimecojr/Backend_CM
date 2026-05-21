@@ -189,6 +189,40 @@ class UserController extends Controller
         ], 200);
     }
 
+    /**
+     * Cambiar la contraseña del usuario autenticado
+     */
+    public function changePassword(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password'     => 'required|string|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error en la validación',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Error en la validación',
+                'errors'  => ['current_password' => ['La contraseña actual es incorrecta.']],
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente',
+        ], 200);
+    }
+
     public function activeFranchises()    {
         $users = User::where('state', 1)
             ->where('id', '>', 2)

@@ -153,8 +153,8 @@ class AgreementController extends Controller
     public function activeAgreements()
     {
         $agreements = Agreement::with('city.department')->where('state', 1)
+            ->orderBy('name')
             ->get()
-            ->sortBy('name')
             ->values()
             ->map(function ($a) {
                 $cityName = $a->city->name ?? 'Sin Ciudad';

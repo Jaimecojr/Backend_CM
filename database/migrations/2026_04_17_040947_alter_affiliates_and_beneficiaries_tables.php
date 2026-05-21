@@ -18,12 +18,17 @@ return new class extends Migration
 
         // En caso hipotético de que la vigencia principal no exista, la iniciamos en una fecha neutra
         \Illuminate\Support\Facades\DB::table('affiliates')->where('validity', 'like', '0000%')->update(['validity' => '2024-01-01']);
-        
+
         // Copiar la fecha de 'validity' al 'sale_date' roto, respetando reportes
         \Illuminate\Support\Facades\DB::table('affiliates')->where('sale_date', 'like', '0000%')->update(['sale_date' => \Illuminate\Support\Facades\DB::raw('validity')]);
-        
+
         // Calcular que el fin de vigencia sea un año despegada
-        \Illuminate\Support\Facades\DB::table('affiliates')->where('validity_end', 'like', '0000%')->update(['validity_end' => \Illuminate\Support\Facades\DB::raw('DATE_ADD(validity, INTERVAL 1 YEAR)')]);
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
+            \Illuminate\Support\Facades\DB::table('affiliates')->where('validity_end', 'like', '0000%')->update(['validity_end' => \Illuminate\Support\Facades\DB::raw('DATE_ADD(validity, INTERVAL 1 YEAR)')]);
+        } else {
+            // SQLite compatible date addition
+            \Illuminate\Support\Facades\DB::table('affiliates')->where('validity_end', 'like', '0000%')->update(['validity_end' => \Illuminate\Support\Facades\DB::raw("date(validity, '+1 year')")]);
+        }
 
         Schema::table('affiliates', function (Blueprint $table) {
             $table->string('contract_code')->nullable()->change();

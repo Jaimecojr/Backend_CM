@@ -25,10 +25,11 @@ class SettingController extends Controller
     public function update(Request $request, Setting $setting)
     {
         $validator = Validator::make($request->all(), [
-            'wa_api_version'     => 'required|string|max:255',
-            'wa_phone_number_id' => 'required|string|max:255',
-            'wa_bearer_token'    => 'required|string|max:255',
-            'wa_template_name'   => 'required|string|max:255',
+            'wa_api_version'               => 'required|string|max:255',
+            'wa_phone_number_id'           => 'required|string|max:255',
+            'wa_bearer_token'              => 'required|string',
+            'wa_template_name'             => 'required|string|max:255',
+            'wa_appointment_template_name' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
