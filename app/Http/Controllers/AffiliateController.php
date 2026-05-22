@@ -247,12 +247,16 @@ class AffiliateController extends Controller
     {
         $hoy = Carbon::today()->toDateString();
 
-        $affiliates = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'validity_end', 'stade'])
+        $query = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'movil', 'phone', 'validity_end', 'stade'])
             ->with(['counselor:id,name,lastname', 'agreement:id,name'])
             ->where('stade', 1)
-            ->where('validity_end', $hoy)
-            ->orderBy('lastname')
-            ->get();
+            ->where('validity_end', $hoy);
+
+        if (auth()->user()->type !== 1) {
+            $query->where('user_id', auth()->id());
+        }
+
+        $affiliates = $query->orderBy('lastname')->get();
 
         return response()->json([
             'message' => 'Afiliados que vencen hoy',

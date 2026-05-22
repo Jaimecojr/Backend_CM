@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Setting;
 use App\Models\WhatsappMessage;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
@@ -24,6 +25,11 @@ class AppointmentController extends Controller
             'affiliate:id,name,lastname',
             'beneficiary:id,name',
         ])->select('appointments.*');
+
+        // Solo el super admin (type = 1) ve todas las citas; los demás solo las suyas
+        if (auth()->user()->type !== 1) {
+            $query->where('appointments.user_id', auth()->id());
+        }
 
         // Filtro por fecha exacta o por período (pendientes / pasadas)
         if ($date) {
@@ -176,6 +182,28 @@ class AppointmentController extends Controller
         return response()->json([
             'message' => 'Cita eliminada correctamente.',
         ]);
+    }
+
+    public function today()
+    {
+        $hoy = Carbon::today()->toDateString();
+
+        $query = Appointment::select(['id', 'name', 'hour', 'doctor_id'])
+            ->with(['doctor:id,name,lastname'])
+            ->where('date', $hoy)
+            ->orderBy('hour');
+
+        if (auth()->user()->type !== 1) {
+            $query->where('user_id', auth()->id());
+        }
+
+        $appointments = $query->get();
+
+        return response()->json([
+            'message' => 'Citas del día',
+            'data'    => $appointments,
+            'date'    => $hoy,
+        ], 200);
     }
 
     private function enviarNotificacionWA(Appointment $appointment): array

@@ -7,6 +7,21 @@ Este archivo contiene el contexto y convenciones clave del proyecto Backend para
 - **Base de Datos:** MySQL
 - **Autenticación:** Basada en tokens (para consumo del frontend)
 
+## Autenticación: Provider MD5 + Bcrypt
+
+Las contraseñas del sistema anterior están almacenadas como **MD5**. Las nuevas (creadas o modificadas en este sistema) se guardan en **bcrypt** gracias al cast `'password' => 'hashed'` del modelo `User`.
+
+Para soportar ambos formatos existe un `UserProvider` personalizado:
+- **Archivo:** `app/Auth/Md5UserProvider.php`
+- **Registrado en:** `app/Providers/AppServiceProvider.php` bajo el nombre `md5-eloquent`
+- **Configurado en:** `config/auth.php` → `providers.users.driver = 'md5-eloquent'`
+
+### Lógica de `validateCredentials()`
+- Si el hash guardado empieza con `$2y$` o `$2a$` → verifica con bcrypt (`Hash::check`)
+- Cualquier otro formato → verifica con `md5($password) === $stored`
+
+**No modificar el driver en `config/auth.php` de vuelta a `eloquent`** — haría que todos los usuarios legacy (MD5) dejen de poder iniciar sesión. La migración a bcrypt ocurre de forma transparente a medida que cada usuario cambia su contraseña.
+
 ## Convenciones de Estado de Registros
 Es crítico mantener la coherencia con los nombres y valores de los estados en la base de datos:
 - **Afiliados (`affiliates`):** Usa el campo `stade`. `1` = Activo, `2` = Inactivo.
@@ -231,6 +246,52 @@ Se registra con `type = 'cita'` siempre (éxito o fallo), para distinguirlo de l
 // o en caso de fallo:
 { "message": "...", "data": {...}, "whatsapp": { "enviado": false, "detalle": "..." } }
 ```
+
+## Dashboard
+
+### Rutas estáticas antes de `apiResource`
+**Regla crítica:** Registrar siempre las rutas estáticas **antes** del `Route::apiResource()` correspondiente. Si se registran después, Laravel interpreta el segmento estático (ej. `"today"`, `"stats"`) como el parámetro `{appointment}` del resource y falla con 404 o model-not-found.
+
+```php
+// CORRECTO
+Route::get('appointments/today', [AppointmentController::class, 'today']); // primero
+Route::apiResource('appointments', AppointmentController::class);           // después
+
+// INCORRECTO — "today" se resuelve como {appointment}
+Route::apiResource('appointments', AppointmentController::class);
+Route::get('appointments/today', ...); // nunca se alcanza
+```
+
+### `AppointmentController::today()`
+- **Ruta:** `GET /api/appointments/today`
+- **Archivo:** `app/Http/Controllers/AppointmentController.php`
+- Retorna citas del día actual (fecha = hoy) ordenadas por hora, con relación `doctor:id,name,lastname`.
+- Filtra por `user_id` para `type !== 1`; el super admin (`type === 1`) ve todas.
+- Campos del select: `id`, `name`, `hour`, `doctor_id`.
+- Respuesta: `{ message, data: [...], date: "YYYY-MM-DD" }`.
+
+### `DashboardController`
+- **Archivo:** `app/Http/Controllers/DashboardController.php`
+
+**`GET /api/dashboard/stats`** — Solo `type === 1` (403 para otros roles).
+Retorna métricas globales:
+```json
+{
+  "data": {
+    "affiliates": { "active": n, "inactive": n, "inactive_by_expiry": n },
+    "appointments": { "this_month": n }
+  }
+}
+```
+- `inactive_by_expiry`: afiliados con `stade=2` y `validity_end < hoy`.
+
+**`GET /api/dashboard/charts?year=YYYY`** — Todos los roles. Year por defecto = año actual.
+Retorna arrays de 12 posiciones (índice 0 = enero):
+- `appointments_by_month`: citas por mes del año solicitado.
+- `affiliates_by_month`: nuevos afiliados por mes (`sale_date`).
+- `by_franchise` (solo `type === 1`): arrays por franquicia activa (`type=2, state=1`).
+
+**Compatibilidad SQLite/MySQL:** Para tests con SQLite usar `strftime('%m', ...)`. Detectar con `config('database.default') === 'sqlite'`.
 
 ## Reglas Generales
 1. **Idioma:** Los comentarios del código, nombres de variables descriptivas, strings de respuesta JSON y mensajes de validación deben estar en **español**.

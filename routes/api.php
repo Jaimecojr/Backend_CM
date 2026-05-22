@@ -16,6 +16,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SpecialtyController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\WhatsAppWebhookController;
 
 Route::get('/user', function (Request $request) {
@@ -83,9 +84,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
 
     // Citas
+    Route::get('appointments/today', [AppointmentController::class, 'today']);
     Route::apiResource('appointments', AppointmentController::class);
 
     // Configuración global del panel
     Route::get('settings', [SettingController::class, 'index']);
     Route::patch('settings/{setting}', [SettingController::class, 'update']);
+
+    // Dashboard
+    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('dashboard/charts', [DashboardController::class, 'charts']);
 });
