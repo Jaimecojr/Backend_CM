@@ -17,7 +17,9 @@ use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MembershipFormController;
 use App\Http\Controllers\WhatsAppWebhookController;
+use App\Http\Controllers\ContactController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -29,6 +31,8 @@ Route::prefix('public')->group(function () {
     Route::get('specialties', [SpecialtyController::class, 'publicIndex']);
     Route::get('departments', [DepartmentController::class, 'index']);
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
+    Route::post('affiliate-request', [MembershipFormController::class, 'store']);
+    Route::post('contact', [ContactController::class, 'store']);
 });
 
 // Webhook WhatsApp — público, Meta lo llama directamente sin autenticación
@@ -94,4 +98,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard
     Route::get('dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('dashboard/charts', [DashboardController::class, 'charts']);
+
+    // Solicitudes de afiliación
+    Route::patch('membership-forms/{id}/convert', [MembershipFormController::class, 'markConverted']);
+    Route::apiResource('membership-forms', MembershipFormController::class)->only(['index', 'show', 'destroy']);
+
+    // Mensajes de contacto
+    Route::apiResource('contacts', ContactController::class)->only(['index', 'show', 'destroy']);
 });

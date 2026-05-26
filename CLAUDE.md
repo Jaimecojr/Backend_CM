@@ -27,6 +27,7 @@ Es crítico mantener la coherencia con los nombres y valores de los estados en l
 - **Afiliados (`affiliates`):** Usa el campo `stade`. `1` = Activo, `2` = Inactivo.
 - **Asesores, Franquicias, Médicos (`doctors`):** Usa el campo `state`. `1` = Activo, `2` = Inactivo.
 - **Convenios (`agreements`), Especialidades (`specialties`):** Usa el campo `state`. `1` = Activo, `0` = Inactivo.
+- **Solicitudes de afiliación (`membership_forms`):** Usa el campo `state`. `0` = Pendiente (visible en panel admin), `1` = Convertido (ya fue procesado — se oculta). El borrado es siempre físico (`delete()`), sin soft-delete.
 
 ### Regla de diseño: campo único para afiliados
 El campo `stade` es el **único** indicador de estado de un afiliado. No existe ni debe existir un campo adicional de "baja permanente". Cuando un registro debe eliminarse definitivamente (duplicado, error de carga), se hace un borrado físico (`delete()`), no un borrado lógico. Esta decisión simplifica las consultas y evita repetir el problema del sistema anterior que tenía dos campos de estado con semánticas distintas.
@@ -156,10 +157,11 @@ Las rutas que consume el sitio web público (`/web`) **no deben estar bajo el mi
 
 ### Rutas actuales
 ```
-GET /api/public/doctors                        → DoctorController@publicIndex
-GET /api/public/specialties                    → SpecialtyController@publicIndex
-GET /api/public/departments                    → DepartmentController@index
-GET /api/public/departments/{department}/cities → CityController@getByDepartment
+GET  /api/public/doctors                         → DoctorController@publicIndex
+GET  /api/public/specialties                     → SpecialtyController@publicIndex
+GET  /api/public/departments                     → DepartmentController@index
+GET  /api/public/departments/{department}/cities → CityController@getByDepartment
+POST /api/public/affiliate-request              → MembershipFormController@store
 ```
 
 ### Por qué no reutilizar los endpoints privados
@@ -292,6 +294,34 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
 - `by_franchise` (solo `type === 1`): arrays por franquicia activa (`type=2, state=1`).
 
 **Compatibilidad SQLite/MySQL:** Para tests con SQLite usar `strftime('%m', ...)`. Detectar con `config('database.default') === 'sqlite'`.
+
+## Módulo Solicitudes de Afiliación (`membership_forms`)
+
+- **Tabla:** `membership_forms`. Campo `state`: `0` = Pendiente, `1` = Convertido (ya procesado).
+- **Ruta pública:** `POST /api/public/affiliate-request` → `MembershipFormController@store`
+- **Rutas admin:** index/show/destroy vía `apiResource` + `PATCH /api/membership-forms/{id}/convert`
+- `store()` crea la solicitud con `state = 0`. `markConverted($id)` pasa a `state = 1` y la saca del listado.
+- `index()` filtra solo `state = 0` (pendientes). Las convertidas desaparecen del panel automáticamente.
+- Borrado siempre físico (`delete()`), sin soft-delete.
+
+## Módulo Mensajes de Contacto (`contacts`)
+
+- **Tabla:** `contacts`. Sin campo de estado — solo lectura y eliminación física.
+- **Columnas:** `name`, `email`, `phone`, `city_id` (FK → `cities`), `subject`, `comment`, `timestamps`. No tiene `address`.
+- **Migración:** `2025_09_12_043132_create_contacts_table.php` — rediseñada con `Schema::dropIfExists` al inicio. Si se corre `migrate:fresh`, los datos se pierden (no hay datos de producción en esta tabla).
+- **Ruta pública:** `POST /api/public/contact` → `ContactController@store`
+- **Rutas admin:** `Route::apiResource('contacts', ContactController::class)->only(['index', 'show', 'destroy'])`
+- **Mapeo de campos del formulario público a columnas DB:**
+
+| Campo request | Columna DB | Regla de validación |
+|---|---|---|
+| `movil` | `phone` | `required\|digits:10` |
+| `asunto` | `subject` | `required\|string\|max:255` |
+| `mensaje` | `comment` | `required\|string\|min:10` |
+| `recaptcha_token` | — | ignorado en backend |
+
+- `index()`: paginado, búsqueda por `name`/`email` (LIKE), carga `city:id,name`, orden `id desc`.
+- `destroy($id)`: hard delete físico. Sin soft-delete ni campo de estado.
 
 ## Reglas Generales
 1. **Idioma:** Los comentarios del código, nombres de variables descriptivas, strings de respuesta JSON y mensajes de validación deben estar en **español**.

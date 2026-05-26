@@ -18,8 +18,9 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Se mantiene como text para evitar truncar tokens largos ya guardados
         Schema::table('settings', function (Blueprint $table) {
-            $table->string('wa_bearer_token')->nullable()->change();
+            $table->text('wa_bearer_token')->nullable()->change();
         });
     }
 };

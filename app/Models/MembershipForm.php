@@ -20,17 +20,14 @@ class MembershipForm extends Model
         'city_id',
         'date',
         'seller',
-        'add',
+        'state',
     ];
 
-    // Relaciones
-    // un formulario una ciudad
     public function city()
     {
         return $this->belongsTo(City::class);
     }
 
-    // Relación: un Formulario tiene muchos beneficiarios
     public function membershipFormBeneficiaries()
     {
         return $this->hasMany(MembershipFormBeneficiary::class);
