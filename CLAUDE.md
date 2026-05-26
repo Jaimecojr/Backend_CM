@@ -162,6 +162,8 @@ GET  /api/public/specialties                     → SpecialtyController@publicI
 GET  /api/public/departments                     → DepartmentController@index
 GET  /api/public/departments/{department}/cities → CityController@getByDepartment
 POST /api/public/affiliate-request              → MembershipFormController@store
+GET  /api/public/content-allies                 → ContentAllyController@publicIndex
+GET  /api/public/content-specialists            → ContentSpecialistController@publicIndex
 ```
 
 ### Por qué no reutilizar los endpoints privados

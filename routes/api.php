@@ -20,6 +20,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipFormController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ContentAllyController;
+use App\Http\Controllers\ContentSpecialistController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -33,6 +35,8 @@ Route::prefix('public')->group(function () {
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
     Route::post('affiliate-request', [MembershipFormController::class, 'store']);
     Route::post('contact', [ContactController::class, 'store']);
+    Route::get('content-allies', [ContentAllyController::class, 'publicIndex']);
+    Route::get('content-specialists', [ContentSpecialistController::class, 'publicIndex']);
 });
 
 // Webhook WhatsApp — público, Meta lo llama directamente sin autenticación
@@ -105,4 +109,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Mensajes de contacto
     Route::apiResource('contacts', ContactController::class)->only(['index', 'show', 'destroy']);
+
+    // Administración de contenido — Aliados estratégicos
+    Route::put('content-allies/reorder', [ContentAllyController::class, 'reorder']);
+    Route::apiResource('content-allies', ContentAllyController::class)->except(['show']);
+
+    // Administración de contenido — Especialistas de la salud
+    Route::put('content-specialists/reorder', [ContentSpecialistController::class, 'reorder']);
+    Route::apiResource('content-specialists', ContentSpecialistController::class)->except(['show']);
 });
