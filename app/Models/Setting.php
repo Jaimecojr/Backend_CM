@@ -14,5 +14,6 @@ class Setting extends Model
         'wa_phone_number_id',
         'wa_bearer_token',
         'wa_template_name',
+        'wa_appointment_template_name',
     ];
 }

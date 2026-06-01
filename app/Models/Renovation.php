@@ -12,6 +12,7 @@ class Renovation extends Model
     protected $fillable = [
         'date_ini',
         'date_end',
+        'date_payment',
         'value',
         'affiliate_id',
     ];

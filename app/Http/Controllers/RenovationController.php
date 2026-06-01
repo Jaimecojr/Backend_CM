@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Affiliate;
 use App\Models\Renovation;
 use Illuminate\Http\Request;
 
@@ -12,54 +13,54 @@ class RenovationController extends Controller
      */
     public function index()
     {
-        //
+        $renovations = Renovation::with('affiliate')->get();
+        return response()->json([
+            'message' => 'Renovaciones obtenidas',
+            'data' => $renovations
+        ], 200);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'affiliate_id' => 'required|exists:affiliates,id',
+            'date_ini' => 'required|date',
+            'date_end' => 'required|date|after_or_equal:date_ini',
+            'date_payment' => 'required|date',
+            'value' => 'required|numeric'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        $renovation = Renovation::create($request->all());
+
+        // Si el afiliado estaba inactivo por vencimiento, se reactiva
+        Affiliate::where('id', $request->affiliate_id)
+            ->where('stade', 2)
+            ->update(['stade' => 1]);
+
+        return response()->json([
+            'message' => 'Renovación guardada correctamente',
+            'data' => $renovation
+        ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Renovation $renovation)
+    public function show($id)
     {
-        //
-    }
+        $renovation = Renovation::with('affiliate')->find($id);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Renovation $renovation)
-    {
-        //
-    }
+        if (!$renovation) {
+            return response()->json(['message' => 'Renovación no encontrada'], 404);
+        }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Renovation $renovation)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Renovation $renovation)
-    {
-        //
+        return response()->json([
+            'message' => 'Detalles de la renovación',
+            'data' => $renovation
+        ], 200);
     }
 }

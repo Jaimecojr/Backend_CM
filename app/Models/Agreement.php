@@ -11,7 +11,7 @@ class Agreement extends Model
 
     protected $fillable = [
         'name',
-        'valor',
+        'amount',
         'state',
         'city_id',
     ];

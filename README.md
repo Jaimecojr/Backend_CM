@@ -1,59 +1,143 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Contacto Médico — API Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST construida en **Laravel 12** que alimenta el panel administrativo y el sitio web público de Contacto Médico.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requisitos previos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Herramienta | Versión mínima |
+|-------------|----------------|
+| PHP         | 8.2            |
+| Composer    | 2.x            |
+| MySQL       | 8.0            |
+| Node.js     | 18 (para compilar assets con Vite) |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Instalación local
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```bash
+# 1. Instalar dependencias PHP
+composer install
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# 2. Copiar y configurar variables de entorno
+cp .env.example .env
+php artisan key:generate
+```
 
-## Laravel Sponsors
+### Variables de entorno esenciales (`.env`)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```env
+APP_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3000
 
-### Premium Partners
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=contactomedico
+DB_USERNAME=root
+DB_PASSWORD=
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# WhatsApp Cloud API (se configura desde el panel → Settings)
+# Los valores se guardan en la tabla `settings`, no aquí,
+# pero el token del webhook sí va en .env:
+WHATSAPP_WEBHOOK_TOKEN=contactomedico_webhook_2026
+```
 
-## Contributing
+```bash
+# 3. Ejecutar migraciones
+php artisan migrate
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 4. Enlace de almacenamiento público (necesario para PDFs de carnets)
+php artisan storage:link
 
-## Code of Conduct
+# 5. Iniciar el servidor de desarrollo
+php artisan serve
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+La API queda disponible en `http://localhost:8000`.
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Ejecutar los tests
 
-## License
+```bash
+php artisan test
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Los tests usan SQLite en memoria — no tocan la base de datos MySQL local.
+
+---
+
+## Estructura relevante
+
+```
+app/Http/Controllers/   → Controladores de la API
+app/Models/             → Modelos Eloquent
+database/migrations/    → Migraciones de la BD
+resources/pdf/          → Plantilla carnet.pdf (base para envío por WA)
+routes/api.php          → Definición de rutas
+storage/app/public/     → Archivos públicos generados (carnets PDF)
+```
+
+---
+
+## Configuración de producción
+
+### 1. Variables de entorno en el servidor
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://api.contactomedico.net
+
+FRONTEND_URL=https://contactomedico.net
+
+DB_CONNECTION=mysql
+DB_HOST=<host_mysql>
+DB_DATABASE=<nombre_bd>
+DB_USERNAME=<usuario>
+DB_PASSWORD=<contraseña>
+
+WHATSAPP_WEBHOOK_TOKEN=contactomedico_webhook_2026
+```
+
+> Los parámetros de WhatsApp Cloud API (`wa_bearer_token`, `wa_phone_number_id`, etc.) se gestionan desde el panel **Settings** y se almacenan en la tabla `settings` — no van en `.env`.
+
+### 2. Despliegue inicial
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+### 3. Cron job del scheduler
+
+Agregar en el panel del servidor (cPanel, SSH, etc.):
+
+```
+* * * * * php /ruta/al/proyecto/artisan schedule:run >> /dev/null 2>&1
+```
+
+Esto ejecuta el comando `affiliates:update-expired` que marca como inactivos los afiliados con fecha de vencimiento pasada.
+
+### 4. Webhook de WhatsApp (Meta for Developers)
+
+Una vez desplegado, actualizar la URL del webhook en [Meta for Developers](https://developers.facebook.com) → tu app → WhatsApp → Configuration → Webhooks:
+
+- **Callback URL:** `https://api.contactomedico.net/api/webhook/whatsapp`
+- **Verify Token:** `contactomedico_webhook_2026` (igual al valor de `WHATSAPP_WEBHOOK_TOKEN`)
+- **Campo suscrito:** `messages`
+
+---
+
+## Notas adicionales
+
+- **`storage:link`** debe ejecutarse una sola vez en el servidor. Sin este enlace la URL pública de los PDFs de carnets no es accesible y Meta no puede descargar el documento.
+- **`config:cache`** requiere que **todas** las variables de entorno estén configuradas antes de correrlo. Si alguna variable cambia después, ejecutar `php artisan config:clear` y volver a cachear.
+- **CORS:** El origen permitido se lee de `FRONTEND_URL`. Si el dominio del frontend cambia, actualizar esa variable y limpiar la caché de configuración.

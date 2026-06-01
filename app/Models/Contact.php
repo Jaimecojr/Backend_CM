@@ -12,15 +12,12 @@ class Contact extends Model
     protected $fillable = [
         'name',
         'email',
-        'address',
-        'city_id',
         'phone',
+        'city_id',
+        'subject',
         'comment',
-        'date',
     ];
 
-    // Relaciones
-    // un contacto tiene una ciudad
     public function city()
     {
         return $this->belongsTo(City::class);

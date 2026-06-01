@@ -79,4 +79,10 @@ class Affiliate extends Model
         return $this->hasMany(Renovation::class);
     }
 
+    // Relación: un Afiliado tiene muchas notas/observaciones
+    public function notes()
+    {
+        return $this->hasMany(AffiliateNote::class);
+    }
+
 }
