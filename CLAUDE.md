@@ -102,8 +102,9 @@ if ($search) {
 **Afiliados (`affiliates`):**
 - `validity`: Fecha inicial del afiliado. Es **inmutable**; no se actualiza al editar el registro, ya que sirve para la auditoría de antigüedad.
 - `validity_end`: Fecha de vencimiento. Solo se actualiza mediante renovaciones.
-- `sale_date`: Fecha de última transacción. Solo se actualiza mediante renovaciones.
-- El registro de renovaciones se guarda en una tabla separada llamada `renovations`.
+- `payment_date`: Fecha de venta / última transacción. Se establece al crear y se actualiza al registrar una renovación.
+- `value`: Valor del plan. `balance`: Saldo pendiente. `commission`: Comisión del asesor. `payment_commission` (`si`/`no`): si la comisión fue pagada. Todos viven directamente en la tabla `affiliates` — **no hay tabla separada de pagos**.
+- El registro de renovaciones se guarda en una tabla separada llamada `renovations`. La tabla `renovations` **no** almacena balance, comisión ni pago de comisión — esos datos son del afiliado, no de la renovación.
 
 ## Reglas de Validación de Campos Comunes
 Al definir las reglas del `Validator::make()` en cualquier controlador, aplica siempre:
@@ -292,7 +293,7 @@ Retorna métricas globales:
 **`GET /api/dashboard/charts?year=YYYY`** — Todos los roles. Year por defecto = año actual.
 Retorna arrays de 12 posiciones (índice 0 = enero):
 - `appointments_by_month`: citas por mes del año solicitado.
-- `affiliates_by_month`: nuevos afiliados por mes (`sale_date`).
+- `affiliates_by_month`: nuevos afiliados por mes (`payment_date`).
 - `by_franchise` (solo `type === 1`): arrays por franquicia activa (`type=2, state=1`).
 
 **Compatibilidad SQLite/MySQL:** Para tests con SQLite usar `strftime('%m', ...)`. Detectar con `config('database.default') === 'sqlite'`.

@@ -23,11 +23,11 @@ class RenovationController extends Controller
     public function store(Request $request)
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'affiliate_id' => 'required|exists:affiliates,id',
-            'date_ini' => 'required|date',
-            'date_end' => 'required|date|after_or_equal:date_ini',
-            'date_payment' => 'required|date',
-            'value' => 'required|numeric'
+            'affiliate_id'       => 'required|exists:affiliates,id',
+            'date_ini'           => 'required|date',
+            'date_end'           => 'required|date|after_or_equal:date_ini',
+            'date_payment'       => 'required|date',
+            'value'              => 'required|numeric',
         ]);
 
         if ($validator->fails()) {

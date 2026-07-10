@@ -81,11 +81,7 @@ class AffiliateFactory extends Factory
             'city_id'            => $city->id,
             'email'              => fake()->unique()->safeEmail(),
             'validity'           => Carbon::now()->subYear()->toDateString(),
-            'value_sale'         => fake()->numberBetween(50000, 500000),
             'agreement_id'       => $agreement->id,
-            'balance'            => fake()->numberBetween(0, 100000),
-            'comission'          => fake()->numberBetween(0, 50000),
-            'payment_commission' => fake()->randomElement(['si', 'no']),
             'company'            => fake()->company(),
             'photo'              => null,
             'photo_rename'       => null,
@@ -94,7 +90,6 @@ class AffiliateFactory extends Factory
             'carnet'             => fake()->randomElement(['si', 'no']),
             'state'              => 1,
             'user_id'            => $user->id,
-            'sale_date'          => Carbon::now()->subMonths(3)->toDateString(),
         ];
     }
 }

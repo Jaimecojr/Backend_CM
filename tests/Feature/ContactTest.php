@@ -119,8 +119,8 @@ class ContactTest extends TestCase
     public function test_index_busca_por_nombre(): void
     {
         $cityId = $this->cityId();
-        Contact::factory()->create(['name' => 'Ana Martínez', 'city_id' => $cityId]);
-        Contact::factory()->create(['name' => 'Pedro López',  'city_id' => $cityId]);
+        Contact::factory()->create(['name' => 'Ana Martínez', 'email' => 'ana@example.com',   'city_id' => $cityId]);
+        Contact::factory()->create(['name' => 'Pedro López',  'email' => 'pedro@example.com', 'city_id' => $cityId]);
 
         $response = $this->actingAs($this->adminUser())
                          ->getJson('/api/contacts?search=Ana');

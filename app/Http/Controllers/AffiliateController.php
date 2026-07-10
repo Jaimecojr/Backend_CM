@@ -65,32 +65,32 @@ class AffiliateController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'counselor_id' => 'required|exists:counselors,id',
-            'contract_code' => 'nullable|string|max:100',
-            'name' => 'required|string|max:100',
-            'lastname' => 'required|string|max:100',
-            'bithdate' => 'nullable|date',
-            'id_card' => 'required|string|max:50',
-            'phone' => 'nullable|string|max:50',
-            'movil' => 'nullable|string|max:50',
-            'address' => 'nullable|string|max:150',
-            'city_id' => 'required|exists:cities,id',
-            'email' => 'nullable|email|max:100',
-            'validity' => 'required|date',
-            'value_sale' => 'required|integer',
-            'agreement_id' => 'required|exists:agreements,id',
-            'balance' => 'required|integer',
-            'comission' => 'required|integer',
+            'counselor_id'       => 'required|exists:counselors,id',
+            'contract_code'      => 'nullable|string|max:100',
+            'name'               => 'required|string|max:100',
+            'lastname'           => 'required|string|max:100',
+            'bithdate'           => 'nullable|date',
+            'id_card'            => 'required|string|max:50',
+            'phone'              => 'nullable|string|max:50',
+            'movil'              => 'nullable|string|max:50',
+            'address'            => 'nullable|string|max:150',
+            'city_id'            => 'required|exists:cities,id',
+            'email'              => 'nullable|email|max:100',
+            'validity'           => 'required|date',
+            'agreement_id'       => 'required|exists:agreements,id',
+            'company'            => 'nullable|string|max:150',
+            'photo'              => 'nullable|string',
+            'photo_rename'       => 'nullable|string',
+            'validity_end'       => 'required|date',
+            'stade'              => 'nullable|integer',
+            'carnet'             => 'required|in:si,no',
+            'state'              => 'required|integer',
+            'user_id'            => 'required|exists:users,id',
+            'payment_date'       => 'required|date',
+            'value'              => 'required|integer',
+            'balance'            => 'required|integer',
+            'commission'         => 'required|integer',
             'payment_commission' => 'required|in:si,no',
-            'company' => 'nullable|string|max:150',
-            'photo' => 'nullable|string',
-            'photo_rename' => 'nullable|string',
-            'validity_end' => 'required|date',
-            'stade' => 'nullable|integer',
-            'carnet' => 'required|in:si,no',
-            'state' => 'required|integer',
-            'user_id' => 'required|exists:users,id',
-            'sale_date' => 'required|date',
         ]);
 
         if ($validator->fails()) {
@@ -100,7 +100,13 @@ class AffiliateController extends Controller
             ], 400);
         }
 
-        $affiliate = Affiliate::create($request->all());
+        $affiliate = Affiliate::create($request->only([
+            'counselor_id', 'contract_code', 'name', 'lastname', 'bithdate',
+            'id_card', 'phone', 'movil', 'address', 'city_id', 'email',
+            'validity', 'agreement_id', 'company', 'photo', 'photo_rename',
+            'validity_end', 'payment_date', 'stade', 'carnet', 'state', 'user_id',
+            'value', 'balance', 'commission', 'payment_commission',
+        ]));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             foreach ($request->beneficiaries as $ben) {
@@ -125,7 +131,9 @@ class AffiliateController extends Controller
      */
     public function show($id)
     {
-        $affiliate = Affiliate::with(['city', 'counselor', 'agreement', 'user', 'beneficiaries'])->find($id);
+        $affiliate = Affiliate::with([
+            'city', 'counselor', 'agreement', 'user', 'beneficiaries'
+        ])->find($id);
 
         if (!$affiliate) {
             return response()->json([
@@ -153,32 +161,32 @@ class AffiliateController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'counselor_id' => 'nullable|exists:counselors,id',
-            'contract_code' => 'nullable|string|max:100',
-            'name' => 'nullable|string|max:100',
-            'lastname' => 'nullable|string|max:100',
-            'bithdate' => 'nullable|date',
-            'id_card' => 'nullable|string|max:50',
-            'phone' => 'nullable|string|max:50',
-            'movil' => 'nullable|string|max:50',
-            'address' => 'nullable|string|max:150',
-            'city_id' => 'nullable|exists:cities,id',
-            'email' => 'nullable|email|max:100',
-            'validity' => 'nullable|date',
-            'value_sale' => 'nullable|integer',
-            'agreement_id' => 'nullable|exists:agreements,id',
-            'balance' => 'nullable|integer',
-            'comission' => 'nullable|integer',
+            'counselor_id'       => 'nullable|exists:counselors,id',
+            'contract_code'      => 'nullable|string|max:100',
+            'name'               => 'nullable|string|max:100',
+            'lastname'           => 'nullable|string|max:100',
+            'bithdate'           => 'nullable|date',
+            'id_card'            => 'nullable|string|max:50',
+            'phone'              => 'nullable|string|max:50',
+            'movil'              => 'nullable|string|max:50',
+            'address'            => 'nullable|string|max:150',
+            'city_id'            => 'nullable|exists:cities,id',
+            'email'              => 'nullable|email|max:100',
+            'validity'           => 'nullable|date',
+            'agreement_id'       => 'nullable|exists:agreements,id',
+            'company'            => 'nullable|string|max:150',
+            'photo'              => 'nullable|string',
+            'photo_rename'       => 'nullable|string',
+            'validity_end'       => 'nullable|date',
+            'stade'              => 'nullable|integer',
+            'carnet'             => 'nullable|in:si,no',
+            'state'              => 'nullable|integer',
+            'user_id'            => 'nullable|exists:users,id',
+            'payment_date'       => 'nullable|date',
+            'value'              => 'nullable|integer',
+            'balance'            => 'nullable|integer',
+            'commission'         => 'nullable|integer',
             'payment_commission' => 'nullable|in:si,no',
-            'company' => 'nullable|string|max:150',
-            'photo' => 'nullable|string',
-            'photo_rename' => 'nullable|string',
-            'validity_end' => 'nullable|date',
-            'stade' => 'nullable|integer',
-            'carnet' => 'nullable|in:si,no',
-            'state' => 'nullable|integer',
-            'user_id' => 'nullable|exists:users,id',
-            'sale_date' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -188,8 +196,13 @@ class AffiliateController extends Controller
             ], 400);
         }
 
-        // Actualizamos usando el request
-        $affiliate->update($request->all());
+        $affiliate->update($request->only([
+            'counselor_id', 'contract_code', 'name', 'lastname', 'bithdate',
+            'id_card', 'phone', 'movil', 'address', 'city_id', 'email',
+            'agreement_id', 'company', 'photo', 'photo_rename',
+            'validity_end', 'payment_date', 'stade', 'carnet', 'state', 'user_id',
+            'value', 'balance', 'commission', 'payment_commission',
+        ]));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             // Eliminar los beneficiarios que ya no estén en la lista enviada

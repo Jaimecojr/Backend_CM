@@ -26,20 +26,20 @@ return new class extends Migration
             $table->unsignedBigInteger('city_id'); // foránea ciudad
             $table->string('email');
             $table->date('validity');
-            $table->integer('value_sale');
             $table->unsignedBigInteger('agreement_id'); // foránea convenio
-            $table->integer('balance');
-            $table->integer('comission');
-            $table->enum('payment_commission', ['si', 'no']);
             $table->string('company');
             $table->string('photo')->nullable();
             $table->string('photo_rename')->nullable();
             $table->date('validity_end');
+            $table->date('payment_date')->nullable();
+            $table->integer('value')->default(0);
+            $table->integer('balance')->default(0);
+            $table->integer('commission')->default(0);
+            $table->enum('payment_commission', ['si', 'no'])->default('no');
             $table->tinyInteger('stade')->default(1);
             $table->enum('carnet', ['si', 'no']);
             $table->tinyInteger('state');
             $table->unsignedBigInteger('user_id'); // foránea franquicia / usuario
-            $table->date('sale_date');
             $table->timestamps();
 
             // Foreign keys
