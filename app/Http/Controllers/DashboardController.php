@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Affiliate;
-use App\Models\AffiliatePayment;
 use App\Models\Appointment;
 use App\Models\User;
 use Carbon\Carbon;
@@ -50,20 +49,19 @@ class DashboardController extends Controller
 
         $db = config('database.default');
         $apptMonthFunc = $db === 'sqlite' ? "CAST(strftime('%m', date) as INTEGER)" : "MONTH(date)";
-        $pmtMonthFunc  = $db === 'sqlite' ? "CAST(strftime('%m', affiliate_payments.payment_date) as INTEGER)" : "MONTH(affiliate_payments.payment_date)";
+        $pmtMonthFunc  = $db === 'sqlite' ? "CAST(strftime('%m', payment_date) as INTEGER)" : "MONTH(payment_date)";
 
         $apptQuery = Appointment::selectRaw("{$apptMonthFunc} as mes, COUNT(*) as total")
             ->whereYear('date', $year)
             ->groupBy('mes');
 
-        $affilQuery = AffiliatePayment::selectRaw("{$pmtMonthFunc} as mes, COUNT(*) as total")
-            ->join('affiliates', 'affiliates.id', '=', 'affiliate_payments.affiliate_id')
-            ->whereYear('affiliate_payments.payment_date', $year)
+        $affilQuery = Affiliate::selectRaw("{$pmtMonthFunc} as mes, COUNT(*) as total")
+            ->whereYear('payment_date', $year)
             ->groupBy('mes');
 
         if ($user->type !== 1) {
             $apptQuery->where('user_id', $user->id);
-            $affilQuery->where('affiliates.user_id', $user->id);
+            $affilQuery->where('user_id', $user->id);
         }
 
         $appointmentsByMonth = array_fill(0, 12, 0);
@@ -101,10 +99,9 @@ class DashboardController extends Controller
 
                 $months = array_fill(0, 12, 0);
                 foreach (
-                    AffiliatePayment::selectRaw("{$pmtMonthFunc} as mes, COUNT(*) as total")
-                        ->join('affiliates', 'affiliates.id', '=', 'affiliate_payments.affiliate_id')
-                        ->whereYear('affiliate_payments.payment_date', $year)
-                        ->where('affiliates.user_id', $franchise->id)
+                    Affiliate::selectRaw("{$pmtMonthFunc} as mes, COUNT(*) as total")
+                        ->whereYear('payment_date', $year)
+                        ->where('user_id', $franchise->id)
                         ->groupBy('mes')
                         ->get() as $row
                 ) {

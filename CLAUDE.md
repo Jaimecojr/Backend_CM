@@ -22,6 +22,11 @@ Para soportar ambos formatos existe un `UserProvider` personalizado:
 
 **No modificar el driver en `config/auth.php` de vuelta a `eloquent`** — haría que todos los usuarios legacy (MD5) dejen de poder iniciar sesión. La migración a bcrypt ocurre de forma transparente a medida que cada usuario cambia su contraseña.
 
+## CORS y Pruebas con Herramientas Externas (Postman, curl)
+
+- **`config/cors.php` → `max_age`:** debe mantenerse en un valor alto (actualmente `86400`, 24h). En `0` el navegador nunca cachea la respuesta del preflight `OPTIONS`, y como el frontend envía headers "no simples" (`Content-Type`, `X-XSRF-TOKEN`) incluso en peticiones `GET`, cada petición del panel disparaba un `OPTIONS` adicional sin necesidad — duplicando el tráfico real hacia el backend. **No revertir a `0`.**
+- **Sanctum SPA + herramientas que no son navegador:** el middleware `EnsureFrontendRequestsAreStateful` de Sanctum solo activa el guard de sesión por cookie si la petición trae un header `Origin` o `Referer` que coincida con `SANCTUM_STATEFUL_DOMAINS` (`config/sanctum.php`). Postman, curl, etc. no envían estos headers por defecto — sin agregarlos manualmente, cualquier petición autenticada por cookie responde `401` aunque la cookie de sesión sea válida. **Para probar rutas protegidas con Postman:** agregar el header `Origin: http://localhost:8000` (o el dominio configurado) a nivel de colección.
+
 ## Convenciones de Estado de Registros
 Es crítico mantener la coherencia con los nombres y valores de los estados en la base de datos:
 - **Afiliados (`affiliates`):** Usa el campo `stade`. `1` = Activo, `2` = Inactivo.

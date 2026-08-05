@@ -19,8 +19,8 @@ return new class extends Migration
         // En caso hipotético de que la vigencia principal no exista, la iniciamos en una fecha neutra
         \Illuminate\Support\Facades\DB::table('affiliates')->where('validity', 'like', '0000%')->update(['validity' => '2024-01-01']);
 
-        // Copiar la fecha de 'validity' al 'sale_date' roto, respetando reportes
-        \Illuminate\Support\Facades\DB::table('affiliates')->where('sale_date', 'like', '0000%')->update(['sale_date' => \Illuminate\Support\Facades\DB::raw('validity')]);
+        // Copiar la fecha de 'validity' al 'payment_date' roto, respetando reportes
+        \Illuminate\Support\Facades\DB::table('affiliates')->where('payment_date', 'like', '0000%')->update(['payment_date' => \Illuminate\Support\Facades\DB::raw('validity')]);
 
         // Calcular que el fin de vigencia sea un año despegada
         if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql') {
@@ -37,9 +37,9 @@ return new class extends Migration
             $table->string('email')->nullable()->change();
             $table->string('company')->nullable()->change();
             
-            $table->integer('value_sale')->default(0)->change();
+            $table->integer('value')->default(0)->change();
             $table->integer('balance')->default(0)->change();
-            $table->integer('comission')->default(0)->change();
+            $table->integer('commission')->default(0)->change();
             
             $table->enum('payment_commission', ['si', 'no'])->default('no')->change();
             $table->enum('carnet', ['si', 'no'])->default('no')->change();
@@ -64,10 +64,10 @@ return new class extends Migration
             $table->string('email')->nullable(false)->change();
             $table->string('company')->nullable(false)->change();
             
-            // Revert defaults by removing them (though dropping default natively is $table->integer('value_sale')->change() etc.)
-            $table->integer('value_sale')->default(null)->change();
+            // Revert defaults by removing them (though dropping default natively is $table->integer('value')->change() etc.)
+            $table->integer('value')->default(null)->change();
             $table->integer('balance')->default(null)->change();
-            $table->integer('comission')->default(null)->change();
+            $table->integer('commission')->default(null)->change();
             
             $table->enum('payment_commission', ['si', 'no'])->default(null)->change();
             $table->enum('carnet', ['si', 'no'])->default(null)->change();
