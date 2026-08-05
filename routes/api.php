@@ -37,6 +37,7 @@ Route::prefix('public')->group(function () {
     Route::post('contact', [ContactController::class, 'store']);
     Route::get('content-allies', [ContentAllyController::class, 'publicIndex']);
     Route::get('content-specialists', [ContentSpecialistController::class, 'publicIndex']);
+    Route::get('franchises', [UserController::class, 'publicActiveFranchises']);
 });
 
 // Webhook WhatsApp — público, Meta lo llama directamente sin autenticación

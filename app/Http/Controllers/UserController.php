@@ -234,6 +234,25 @@ class UserController extends Controller
         return response()->json([
             'message' => 'Franquicias activas obtenidas correctamente',
             'data' => $users,
-        ], 200);    
+        ], 200);
+    }
+
+    /**
+     * Franquicias activas para el sitio web público (footer).
+     * Solo expone nombre, dirección y ciudad; nunca datos internos (NIT, email, teléfono).
+     */
+    public function publicActiveFranchises()
+    {
+        $franchises = User::where('state', 1)
+            ->where('type', 2)
+            ->with('city:id,name')
+            ->select('id', 'name', 'address', 'city_id')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'message' => 'Franquicias activas obtenidas correctamente',
+            'data' => $franchises,
+        ], 200);
     }
 }
