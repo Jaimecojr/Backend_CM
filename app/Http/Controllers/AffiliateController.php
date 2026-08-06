@@ -344,4 +344,42 @@ class AffiliateController extends Controller
             'data'    => $affiliate,
         ], 200);
     }
+
+    /**
+     * Consulta pública de estado de un afiliado y su grupo familiar por cédula.
+     * A diferencia de byIdCard() (uso interno para crear citas), no bloquea
+     * afiliados inactivos o vencidos: siempre retorna los datos si el
+     * registro existe, para que el sitio público muestre el aviso de estado.
+     */
+    public function publicStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'document_number' => 'required|string|regex:/^[0-9]+$/',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ingresa un número de documento válido.',
+            ], 422);
+        }
+
+        $affiliate = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'stade', 'validity_end'])
+            ->with(['beneficiaries:id,affiliate_id,name'])
+            ->where('id_card', $request->input('document_number'))
+            ->first();
+
+        if (!$affiliate) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No encontramos un grupo familiar con esa cédula.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Afiliado encontrado.',
+            'data'    => $affiliate,
+        ], 200);
+    }
 }

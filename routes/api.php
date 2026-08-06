@@ -34,6 +34,7 @@ Route::prefix('public')->group(function () {
     Route::get('departments', [DepartmentController::class, 'index']);
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
     Route::post('affiliate-request', [MembershipFormController::class, 'store']);
+    Route::post('affiliate-status', [AffiliateController::class, 'publicStatus']);
     Route::post('contact', [ContactController::class, 'store']);
     Route::get('content-allies', [ContentAllyController::class, 'publicIndex']);
     Route::get('content-specialists', [ContentSpecialistController::class, 'publicIndex']);
