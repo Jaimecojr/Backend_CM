@@ -57,6 +57,32 @@ class AffiliatePublicStatusTest extends TestCase
                  ->assertJsonPath('data.stade', 2);
     }
 
+    public function test_con_cedula_duplicada_retorna_el_registro_con_vigencia_mas_reciente(): void
+    {
+        // Registro viejo: inactivo y vencido hace 2 años (simula el caso real de producción).
+        Affiliate::factory()->create([
+            'id_card'      => '3094947820',
+            'stade'        => 2,
+            'validity_end' => Carbon::today()->subYears(2)->toDateString(),
+        ]);
+
+        // Registro nuevo: activo y vigente a futuro (2027), misma cédula.
+        Affiliate::factory()->create([
+            'id_card'      => '3094947820',
+            'stade'        => 1,
+            'validity_end' => Carbon::today()->addYear()->toDateString(),
+        ]);
+
+        $response = $this->postJson('/api/public/affiliate-status', [
+            'document_number' => '3094947820',
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('success', true)
+                 ->assertJsonPath('data.stade', 1)
+                 ->assertJsonPath('data.validity_end', Carbon::today()->addYear()->toDateString());
+    }
+
     public function test_retorna_404_si_no_existe(): void
     {
         $response = $this->postJson('/api/public/affiliate-status', [

@@ -367,6 +367,8 @@ class AffiliateController extends Controller
         $affiliate = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'stade', 'validity_end'])
             ->with(['beneficiaries:id,affiliate_id,name'])
             ->where('id_card', $request->input('document_number'))
+            ->orderByDesc('validity_end')
+            ->orderByDesc('id')
             ->first();
 
         if (!$affiliate) {
