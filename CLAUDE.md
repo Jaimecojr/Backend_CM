@@ -22,6 +22,14 @@ Para soportar ambos formatos existe un `UserProvider` personalizado:
 
 **No modificar el driver en `config/auth.php` de vuelta a `eloquent`** — haría que todos los usuarios legacy (MD5) dejen de poder iniciar sesión. La migración a bcrypt ocurre de forma transparente a medida que cada usuario cambia su contraseña.
 
+## Cookie `auth_hint` (`routes/web.php`)
+
+El middleware de Next.js (`proxy.ts` en el frontend) necesita saber, sin llamar al backend, si probablemente hay sesión activa para redirigir rápido a `/auth/sign-in` cuando no la hay. Para eso existe la cookie `auth_hint`:
+- **`POST /login`** exitoso la crea (`cookie('auth_hint', '1', ...)`), con el mismo `domain`/`path`/`secure`/`same_site` que la cookie de sesión (`config('session.*')`).
+- **`POST /logout`** la borra explícitamente (`Cookie::forget(...)`).
+
+**No usar `XSRF-TOKEN` para este propósito** — Laravel la setea para cualquier sesión (autenticada o no) y nunca se limpia en `/logout`, así que casi siempre está presente y rompe la verificación rápida del middleware. `auth_hint` no es la fuente de verdad de autenticación (eso sigue siendo `GET /user` vía `auth:sanctum`, consultado desde `useRequireAuth()` en el frontend) — es solo una pista para evitar el round-trip cuando claramente no hay sesión. Si se renombra o cambia el dominio de esta cookie, hay que actualizar `proxy.ts` en el mismo cambio.
+
 ## CORS y Pruebas con Herramientas Externas (Postman, curl)
 
 - **`config/cors.php` → `max_age`:** debe mantenerse en un valor alto (actualmente `86400`, 24h). En `0` el navegador nunca cachea la respuesta del preflight `OPTIONS`, y como el frontend envía headers "no simples" (`Content-Type`, `X-XSRF-TOKEN`) incluso en peticiones `GET`, cada petición del panel disparaba un `OPTIONS` adicional sin necesidad — duplicando el tráfico real hacia el backend. **No revertir a `0`.**
