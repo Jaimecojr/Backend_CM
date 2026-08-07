@@ -80,40 +80,41 @@ class DashboardController extends Controller
         ];
 
         if ($user->type === 1) {
-            $franchises = User::where('type', 2)->where('state', 1)->get(['id', 'name']);
-            $appointmentsByFranchise = [];
-            $affiliatesByFranchise   = [];
+            $franchises   = User::where('type', 2)->where('state', 1)->get(['id', 'name']);
+            $franchiseIds = $franchises->pluck('id');
 
-            foreach ($franchises as $franchise) {
+            // Una sola query agrupada por franquicia + mes en vez de 2 queries
+            // por cada franquicia (evita N+1 cuando hay muchas franquicias).
+            $apptTotals = Appointment::selectRaw("user_id, {$apptMonthFunc} as mes, COUNT(*) as total")
+                ->whereYear('date', $year)
+                ->whereIn('user_id', $franchiseIds)
+                ->groupBy('user_id', 'mes')
+                ->get()
+                ->groupBy('user_id');
+
+            $affilTotals = Affiliate::selectRaw("user_id, {$pmtMonthFunc} as mes, COUNT(*) as total")
+                ->whereYear('payment_date', $year)
+                ->whereIn('user_id', $franchiseIds)
+                ->groupBy('user_id', 'mes')
+                ->get()
+                ->groupBy('user_id');
+
+            $mesesPorFranquicia = function ($totalsPorUsuario, $franchiseId) {
                 $months = array_fill(0, 12, 0);
-                foreach (
-                    Appointment::selectRaw("{$apptMonthFunc} as mes, COUNT(*) as total")
-                        ->whereYear('date', $year)
-                        ->where('user_id', $franchise->id)
-                        ->groupBy('mes')
-                        ->get() as $row
-                ) {
+                foreach ($totalsPorUsuario->get($franchiseId, []) as $row) {
                     $months[$row->mes - 1] = (int) $row->total;
                 }
-                $appointmentsByFranchise[] = $months;
-
-                $months = array_fill(0, 12, 0);
-                foreach (
-                    Affiliate::selectRaw("{$pmtMonthFunc} as mes, COUNT(*) as total")
-                        ->whereYear('payment_date', $year)
-                        ->where('user_id', $franchise->id)
-                        ->groupBy('mes')
-                        ->get() as $row
-                ) {
-                    $months[$row->mes - 1] = (int) $row->total;
-                }
-                $affiliatesByFranchise[] = $months;
-            }
+                return $months;
+            };
 
             $data['by_franchise'] = [
-                'users'                     => $franchises->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
-                'appointments_by_franchise' => $appointmentsByFranchise,
-                'affiliates_by_franchise'   => $affiliatesByFranchise,
+                'users' => $franchises->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
+                'appointments_by_franchise' => $franchises
+                    ->map(fn ($f) => $mesesPorFranquicia($apptTotals, $f->id))
+                    ->values(),
+                'affiliates_by_franchise' => $franchises
+                    ->map(fn ($f) => $mesesPorFranquicia($affilTotals, $f->id))
+                    ->values(),
             ];
         }
 
