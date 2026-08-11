@@ -62,7 +62,7 @@ class CarnetController extends Controller
             'type'              => 'template',
             'template'          => [
                 'name'       => $settings->wa_template_name,
-                'language'   => ['code' => 'es'],
+                'language'   => ['code' => 'es_CO'],
                 'components' => [
                     [
                         'type'       => 'header',
