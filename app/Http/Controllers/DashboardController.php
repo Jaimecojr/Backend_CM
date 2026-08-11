@@ -12,7 +12,7 @@ class DashboardController extends Controller
 {
     public function stats()
     {
-        if (auth()->user()->type !== 1) {
+        if (!auth()->user()->esSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
@@ -59,7 +59,7 @@ class DashboardController extends Controller
             ->whereYear('payment_date', $year)
             ->groupBy('mes');
 
-        if ($user->type !== 1) {
+        if (!$user->esSuperAdmin()) {
             $apptQuery->where('user_id', $user->id);
             $affilQuery->where('user_id', $user->id);
         }

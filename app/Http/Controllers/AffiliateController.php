@@ -265,7 +265,7 @@ class AffiliateController extends Controller
             ->where('stade', 1)
             ->where('validity_end', $hoy);
 
-        if (auth()->user()->type !== 1) {
+        if (!auth()->user()->esSuperAdmin()) {
             $query->where('user_id', auth()->id());
         }
 

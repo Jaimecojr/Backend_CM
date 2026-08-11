@@ -35,7 +35,7 @@ class AgreementController extends Controller
      */
     public function store(Request $request)
     {
-        if ($request->user()->type !== 1) {
+        if (!$request->user()->esSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
@@ -92,7 +92,7 @@ class AgreementController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if ($request->user()->type !== 1) {
+        if (!$request->user()->esSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 

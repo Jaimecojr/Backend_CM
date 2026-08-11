@@ -27,7 +27,7 @@ class AppointmentController extends Controller
         ])->select('appointments.*');
 
         // Solo el super admin (type = 1) ve todas las citas; los demás solo las suyas
-        if (auth()->user()->type !== 1) {
+        if (!auth()->user()->esSuperAdmin()) {
             $query->where('appointments.user_id', auth()->id());
         }
 
@@ -193,7 +193,7 @@ class AppointmentController extends Controller
             ->where('date', $hoy)
             ->orderBy('hour');
 
-        if (auth()->user()->type !== 1) {
+        if (!auth()->user()->esSuperAdmin()) {
             $query->where('user_id', auth()->id());
         }
 
