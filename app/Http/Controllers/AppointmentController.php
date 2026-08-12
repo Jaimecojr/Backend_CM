@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Setting;
-use App\Models\WhatsappMessage;
+use App\Services\WhatsAppClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
 class AppointmentController extends Controller
 {
+    public function __construct(private WhatsAppClient $whatsapp)
+    {
+    }
+
     public function index(Request $request)
     {
         $perPage = (int) $request->get('per_page', 20);
@@ -235,57 +238,30 @@ class AppointmentController extends Controller
         $fecha          = \Carbon\Carbon::parse($appointment->date)->format('d/m/Y');
         $valor          = '$ ' . number_format($appointment->value, 0, ',', '.');
 
-        $recipient = '57' . $phone;
-
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'recipient_type'    => 'individual',
-            'to'                => $recipient,
-            'type'              => 'template',
-            'template'          => [
-                'name'       => $settings->wa_appointment_template_name,
-                'language'   => ['code' => 'es_CO'],
-                'components' => [
-                    [
-                        'type'       => 'body',
-                        'parameters' => [
-                            ['type' => 'text', 'text' => $appointment->name],
-                            ['type' => 'text', 'text' => $fecha],
-                            ['type' => 'text', 'text' => $appointment->hour],
-                            ['type' => 'text', 'text' => $appointment->address],
-                            ['type' => 'text', 'text' => $especialidad],
-                            ['type' => 'text', 'text' => $nombreDoctor],
-                            ['type' => 'text', 'text' => $valor],
-                        ],
-                    ],
+        $components = [
+            [
+                'type'       => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $appointment->name],
+                    ['type' => 'text', 'text' => $fecha],
+                    ['type' => 'text', 'text' => $appointment->hour],
+                    ['type' => 'text', 'text' => $appointment->address],
+                    ['type' => 'text', 'text' => $especialidad],
+                    ['type' => 'text', 'text' => $nombreDoctor],
+                    ['type' => 'text', 'text' => $valor],
                 ],
             ],
         ];
 
-        $apiUrl = "https://graph.facebook.com/{$settings->wa_api_version}/{$settings->wa_phone_number_id}/messages";
+        $resultado = $this->whatsapp->enviarPlantilla(
+            $phone,
+            $settings->wa_appointment_template_name,
+            $components,
+            'cita',
+        );
 
-        try {
-            $http = Http::withToken($settings->wa_bearer_token);
-            if (app()->environment('local')) {
-                $http = $http->withoutVerifying();
-            }
-            $response     = $http->post($apiUrl, $payload);
-            $responseData = $response->json();
-        } catch (\Throwable $e) {
-            return ['enviado' => false, 'detalle' => 'Error al contactar la API de WhatsApp'];
-        }
-
-        WhatsappMessage::create([
-            'response'     => json_encode($responseData),
-            'recipient_id' => $recipient,
-            'deleted'      => 0,
-            'type'         => 'cita',
-        ]);
-
-        if (!empty($responseData['messages'][0]['id'])) {
-            return ['enviado' => true];
-        }
-
-        return ['enviado' => false, 'detalle' => 'Error en la API de WhatsApp'];
+        return $resultado['enviado']
+            ? ['enviado' => true]
+            : ['enviado' => false, 'detalle' => 'Error en la API de WhatsApp'];
     }
 }
