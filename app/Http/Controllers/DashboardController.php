@@ -76,7 +76,7 @@ class DashboardController extends Controller
             'affiliates_by_month'   => $affiliatesByMonth,
         ];
 
-        if ($user->type === 1) {
+        if ($user->esSuperAdmin()) {
             $franchises   = User::where('type', 2)->where('state', 1)->get(['id', 'name']);
             $franchiseIds = $franchises->pluck('id');
 

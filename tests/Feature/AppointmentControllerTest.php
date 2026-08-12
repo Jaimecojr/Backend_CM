@@ -8,20 +8,16 @@ use App\Models\Beneficiary;
 use App\Models\Doctor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
+/**
+ * Sin Setting configurado: enviarNotificacionWA() falla temprano por
+ * configuración incompleta, sin necesidad de Http::fake() en los tests
+ * que no verifican el envío de WhatsApp explícitamente.
+ */
 class AppointmentControllerTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // Sin Setting configurado: enviarNotificacionWA() falla temprano
-        // por configuración incompleta, sin necesidad de Http::fake() en
-        // los tests que no verifican el envío de WhatsApp explícitamente.
-    }
 
     public function test_store_crea_cita_con_datos_validos(): void
     {
