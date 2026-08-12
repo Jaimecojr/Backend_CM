@@ -70,28 +70,15 @@ class AffiliateControllerTest extends TestCase
         $this->assertDatabaseHas('beneficiaries', ['name' => 'Hijo Test']);
     }
 
-    public function test_store_rechaza_sin_movil(): void
+    public function test_update_rechaza_movil_null_en_lugar_de_500(): void
     {
-        $admin      = User::factory()->create(['type' => 1]);
-        $referencia = Affiliate::factory()->create();
+        // `movil` es NOT NULL en la BD — un null explícito debe fallar
+        // validación (400) en vez de tumbar el UPDATE con un 500 de SQL.
+        $admin     = User::factory()->create(['type' => 1]);
+        $affiliate = Affiliate::factory()->create();
 
-        $response = $this->actingAs($admin)->postJson('/api/affiliates', [
-            'counselor_id'       => $referencia->counselor_id,
-            'name'               => 'Sin',
-            'lastname'           => 'Movil',
-            'id_card'            => '777888999',
-            'city_id'            => $referencia->city_id,
-            'validity'           => now()->toDateString(),
-            'agreement_id'       => $referencia->agreement_id,
-            'validity_end'       => now()->addYear()->toDateString(),
-            'carnet'             => 'no',
-            'state'              => 1,
-            'user_id'            => $referencia->user_id,
-            'payment_date'       => now()->toDateString(),
-            'value'              => 100000,
-            'balance'            => 0,
-            'commission'         => 0,
-            'payment_commission' => 'no',
+        $response = $this->actingAs($admin)->patchJson("/api/affiliates/{$affiliate->id}", [
+            'movil' => null,
         ]);
 
         $response->assertStatus(400);
