@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use App\Models\WhatsappMessage;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 class WhatsAppClient
@@ -20,13 +21,7 @@ class WhatsAppClient
     {
         $settings = Setting::first();
 
-        if (
-            !$settings ||
-            empty($settings->wa_api_version) ||
-            empty($settings->wa_phone_number_id) ||
-            empty($settings->wa_bearer_token) ||
-            empty($templateName)
-        ) {
+        if (!$this->configuracionBasicaCompleta($settings) || empty($templateName)) {
             return ['enviado' => false, 'detalle' => 'Configuración de WhatsApp incompleta'];
         }
 
@@ -44,15 +39,8 @@ class WhatsAppClient
             ],
         ];
 
-        $apiUrl = "https://graph.facebook.com/{$settings->wa_api_version}/{$settings->wa_phone_number_id}/messages";
-
         try {
-            $http = Http::withToken($settings->wa_bearer_token);
-            if (app()->environment('local')) {
-                $http = $http->withoutVerifying();
-            }
-            $response     = $http->post($apiUrl, $payload);
-            $responseData = $response->json();
+            $responseData = $this->clienteHttp($settings)->post($this->urlApi($settings), $payload)->json();
         } catch (\Throwable $e) {
             WhatsappMessage::create([
                 'response'     => json_encode(['error' => $e->getMessage()]),
@@ -87,12 +75,7 @@ class WhatsAppClient
     {
         $settings = Setting::first();
 
-        if (
-            !$settings ||
-            empty($settings->wa_api_version) ||
-            empty($settings->wa_phone_number_id) ||
-            empty($settings->wa_bearer_token)
-        ) {
+        if (!$this->configuracionBasicaCompleta($settings)) {
             return;
         }
 
@@ -104,16 +87,39 @@ class WhatsAppClient
             'text'              => ['body' => $texto],
         ];
 
-        $apiUrl = "https://graph.facebook.com/{$settings->wa_api_version}/{$settings->wa_phone_number_id}/messages";
-
         try {
-            $http = Http::withToken($settings->wa_bearer_token);
-            if (app()->environment('local')) {
-                $http = $http->withoutVerifying();
-            }
-            $http->post($apiUrl, $payload);
+            $this->clienteHttp($settings)->post($this->urlApi($settings), $payload);
         } catch (\Throwable) {
             // Silencioso — Meta ya recibió el 200, no reintentar.
         }
+    }
+
+    /**
+     * Verifica los 3 campos de configuración comunes a cualquier envío
+     * (versión de API, ID del número, token). Cada método público valida
+     * además lo que le sea propio (ej. nombre de plantilla).
+     */
+    private function configuracionBasicaCompleta(?Setting $settings): bool
+    {
+        return $settings
+            && !empty($settings->wa_api_version)
+            && !empty($settings->wa_phone_number_id)
+            && !empty($settings->wa_bearer_token);
+    }
+
+    private function urlApi(Setting $settings): string
+    {
+        return "https://graph.facebook.com/{$settings->wa_api_version}/{$settings->wa_phone_number_id}/messages";
+    }
+
+    private function clienteHttp(Setting $settings): PendingRequest
+    {
+        $http = Http::withToken($settings->wa_bearer_token);
+
+        if (app()->environment('local')) {
+            $http = $http->withoutVerifying();
+        }
+
+        return $http;
     }
 }
