@@ -16,15 +16,12 @@ class DashboardController extends Controller
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
-        $hoy       = Carbon::today()->toDateString();
         $inicioMes = Carbon::now()->startOfMonth()->toDateString();
         $finMes    = Carbon::now()->endOfMonth()->toDateString();
 
         $active           = Affiliate::where('stade', 1)->count();
         $inactive         = Affiliate::where('stade', 2)->count();
-        $inactiveByExpiry = Affiliate::where('stade', 2)
-                                ->where('validity_end', '<', $hoy)
-                                ->count();
+        $inactiveByExpiry = Affiliate::inactivosPorVencimiento()->count();
         $thisMonth = Appointment::whereBetween('date', [$inicioMes, $finMes])->count();
 
         return response()->json([

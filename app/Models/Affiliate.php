@@ -85,4 +85,27 @@ class Affiliate extends Model
         return $this->hasMany(AffiliateNote::class);
     }
 
+    // Scopes de vigencia
+    // Activos cuya vigencia ya pasó — candidatos a inactivar (usado por el
+    // comando affiliates:update-expired).
+    public function scopeActivosVencidos($query)
+    {
+        return $query->where('stade', 1)->where('validity_end', '<', now()->toDateString());
+    }
+
+    // Activos que vencen exactamente hoy — alerta del dashboard para que
+    // los asesores gestionen la renovación antes de que se inactiven.
+    public function scopeActivosVencenHoy($query)
+    {
+        return $query->where('stade', 1)->where('validity_end', now()->toDateString());
+    }
+
+    // Ya inactivos y además con vigencia vencida — métrica de
+    // dashboard/stats (distingue inactivos "por vencimiento" de inactivos
+    // por baja manual).
+    public function scopeInactivosPorVencimiento($query)
+    {
+        return $query->where('stade', 2)->where('validity_end', '<', now()->toDateString());
+    }
+
 }

@@ -262,8 +262,7 @@ class AffiliateController extends Controller
 
         $query = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'movil', 'phone', 'validity_end', 'stade'])
             ->with(['counselor:id,name,lastname', 'agreement:id,name'])
-            ->where('stade', 1)
-            ->where('validity_end', $hoy);
+            ->activosVencenHoy();
 
         if (!auth()->user()->esSuperAdmin()) {
             $query->where('user_id', auth()->id());
