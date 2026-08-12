@@ -74,4 +74,19 @@ class AffiliateMovilValidationTest extends TestCase
 
         $response->assertStatus(201);
     }
+
+    public function test_store_rechaza_sin_movil(): void
+    {
+        // La columna `movil` es NOT NULL en la BD — siempre debe llevarse ese
+        // dato para un afiliado, a diferencia de otros campos opcionales.
+        $admin      = User::factory()->create(['type' => 1]);
+        $referencia = Affiliate::factory()->create();
+        $payload    = $this->payloadValido($referencia, '3001234567');
+        unset($payload['movil']);
+
+        $response = $this->actingAs($admin)->postJson('/api/affiliates', $payload);
+
+        $response->assertStatus(400);
+        $response->assertJsonValidationErrors(['movil']);
+    }
 }

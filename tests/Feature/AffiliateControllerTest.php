@@ -62,11 +62,40 @@ class AffiliateControllerTest extends TestCase
             'balance'            => 0,
             'commission'         => 0,
             'payment_commission' => 'no',
+            'movil'              => '3009876543',
             'beneficiaries'      => [['name' => 'Hijo Test', 'id_card' => '999']],
         ]);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('beneficiaries', ['name' => 'Hijo Test']);
+    }
+
+    public function test_store_rechaza_sin_movil(): void
+    {
+        $admin      = User::factory()->create(['type' => 1]);
+        $referencia = Affiliate::factory()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/affiliates', [
+            'counselor_id'       => $referencia->counselor_id,
+            'name'               => 'Sin',
+            'lastname'           => 'Movil',
+            'id_card'            => '777888999',
+            'city_id'            => $referencia->city_id,
+            'validity'           => now()->toDateString(),
+            'agreement_id'       => $referencia->agreement_id,
+            'validity_end'       => now()->addYear()->toDateString(),
+            'carnet'             => 'no',
+            'state'              => 1,
+            'user_id'            => $referencia->user_id,
+            'payment_date'       => now()->toDateString(),
+            'value'              => 100000,
+            'balance'            => 0,
+            'commission'         => 0,
+            'payment_commission' => 'no',
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJsonValidationErrors(['movil']);
     }
 
     public function test_update_no_reactiva_el_afiliado_solo_por_editarlo(): void

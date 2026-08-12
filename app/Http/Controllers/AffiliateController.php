@@ -72,7 +72,7 @@ class AffiliateController extends Controller
             'bithdate'           => 'nullable|date',
             'id_card'            => 'required|string|max:50',
             'phone'              => 'nullable|string|max:50',
-            'movil'              => 'nullable|digits:10',
+            'movil'              => 'required|digits:10',
             'address'            => 'nullable|string|max:150',
             'city_id'            => 'required|exists:cities,id',
             'email'              => 'nullable|email|max:100',
