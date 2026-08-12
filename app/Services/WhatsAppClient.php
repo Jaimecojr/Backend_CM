@@ -76,4 +76,44 @@ class WhatsAppClient
             'response' => $responseData,
         ];
     }
+
+    /**
+     * Envía un mensaje de texto libre (autoreply del webhook). A diferencia
+     * de enviarPlantilla(), no registra en whatsapp_messages y no retorna
+     * nada — los errores se ignoran a propósito (Meta ya recibió el 200 de
+     * confirmación del webhook, no tiene sentido reintentar).
+     */
+    public function enviarTexto(string $telefono, string $texto): void
+    {
+        $settings = Setting::first();
+
+        if (
+            !$settings ||
+            empty($settings->wa_api_version) ||
+            empty($settings->wa_phone_number_id) ||
+            empty($settings->wa_bearer_token)
+        ) {
+            return;
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type'    => 'individual',
+            'to'                => $telefono,
+            'type'              => 'text',
+            'text'              => ['body' => $texto],
+        ];
+
+        $apiUrl = "https://graph.facebook.com/{$settings->wa_api_version}/{$settings->wa_phone_number_id}/messages";
+
+        try {
+            $http = Http::withToken($settings->wa_bearer_token);
+            if (app()->environment('local')) {
+                $http = $http->withoutVerifying();
+            }
+            $http->post($apiUrl, $payload);
+        } catch (\Throwable) {
+            // Silencioso — Meta ya recibió el 200, no reintentar.
+        }
+    }
 }
