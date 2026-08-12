@@ -118,13 +118,14 @@ if ($search) {
 - `payment_date`: Fecha de venta / última transacción. Se establece al crear y se actualiza al registrar una renovación.
 - `value`: Valor del plan. `balance`: Saldo pendiente. `commission`: Comisión del asesor. `payment_commission` (`si`/`no`): si la comisión fue pagada. Todos viven directamente en la tabla `affiliates` — **no hay tabla separada de pagos**.
 - El registro de renovaciones se guarda en una tabla separada llamada `renovations`. La tabla `renovations` **no** almacena balance, comisión ni pago de comisión — esos datos son del afiliado, no de la renovación.
+- `movil`: **excepción a la regla general de validación** (ver tabla abajo) — la columna `affiliates.movil` es `NOT NULL` sin default porque un afiliado siempre debe tener un celular de contacto. Por eso `AffiliateController::store()` valida `movil` como `'required|digits:10'`, no `'nullable|digits:10'`. `update()` sí lo deja `'nullable|digits:10'` (permite edición parcial sin reenviar el campo, igual que `id_card`). **No revertir `store()` a `nullable`** — antes de esta regla, crear un afiliado sin `movil` producía un error 500 de SQL (violación NOT NULL) en vez de un 400 de validación.
 
 ## Reglas de Validación de Campos Comunes
 Al definir las reglas del `Validator::make()` en cualquier controlador, aplica siempre:
 
 | Campo | Regla Laravel |
 |---|---|
-| `movil` (celular) | `'nullable\|digits:10'` — exactamente 10 dígitos numéricos |
+| `movil` (celular) | `'nullable\|digits:10'` — exactamente 10 dígitos numéricos. **Excepción:** `AffiliateController::store()` usa `'required\|digits:10'` (ver sección Afiliados arriba) porque la columna es `NOT NULL`. |
 | `phone` (teléfono) | `'nullable\|string\|max:255'` — libre (la restricción de formato es solo frontend) |
 | `value_agreement` / `amount` (valor) | `'required\|numeric\|min:10000'` o `'nullable\|numeric\|min:10000'` según si es obligatorio |
 
