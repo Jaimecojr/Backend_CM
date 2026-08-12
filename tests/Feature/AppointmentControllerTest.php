@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Affiliate;
 use App\Models\Appointment;
+use App\Models\Beneficiary;
 use App\Models\Doctor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,16 +59,31 @@ class AppointmentControllerTest extends TestCase
 
     public function test_index_normaliza_owner_segun_type(): void
     {
-        $user = User::factory()->create();
-        Appointment::factory()->create(['type' => 1, 'user_id' => $user->id]);
-        Appointment::factory()->create(['type' => 2, 'user_id' => $user->id]);
+        // `owner` no es un string ('affiliate'/'beneficiary') — es el objeto
+        // relacionado completo (Affiliate o Beneficiary), tal como lo espera
+        // el panel (frontend-cm/app/.../appointments: owner.id, owner.name,
+        // owner.lastname, owner.id_card). Verificado contra
+        // AppointmentController::index() (línea `$arr['owner'] = $appt->type
+        // === 1 ? $appt->affiliate : $appt->beneficiary`).
+        $user        = User::factory()->create();
+        $affiliate   = Affiliate::factory()->create();
+        $beneficiary = Beneficiary::create([
+            'affiliate_id' => $affiliate->id,
+            'name'         => 'Beneficiario Test',
+            'id_card'      => '888999000',
+        ]);
+
+        Appointment::factory()->create(['type' => 1, 'afi_code' => $affiliate->id, 'user_id' => $user->id]);
+        Appointment::factory()->create(['type' => 2, 'afi_code' => $beneficiary->id, 'user_id' => $user->id]);
 
         $response = $this->actingAs($user)->getJson('/api/appointments?period=all');
 
         $response->assertStatus(200);
-        $owners = array_column($response->json('data'), 'owner');
-        $this->assertContains('affiliate', $owners);
-        $this->assertContains('beneficiary', $owners);
+
+        $porTipo = collect($response->json('data'))->keyBy('type');
+
+        $this->assertSame($affiliate->id, $porTipo[1]['owner']['id'] ?? null);
+        $this->assertSame($beneficiary->id, $porTipo[2]['owner']['id'] ?? null);
     }
 
     public function test_index_no_admin_solo_ve_sus_propias_citas(): void
