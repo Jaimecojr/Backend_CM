@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Affiliate;
 use App\Models\Setting;
 use App\Models\User;
-use App\Models\WhatsappMessage;
-use Illuminate\Support\Facades\Http;
+use App\Services\WhatsAppClient;
 use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Tcpdf\Fpdi;
 
 class CarnetController extends Controller
 {
+    public function __construct(private WhatsAppClient $whatsapp)
+    {
+    }
+
     public function send($id)
     {
         $affiliate = Affiliate::with('beneficiaries')->find($id);
@@ -55,68 +58,46 @@ class CarnetController extends Controller
         $pdfUrl    = config('app.url') . '/storage/' . $relativePath;
         $nombreCompleto = strtoupper($affiliate->name . ' ' . $affiliate->lastname);
 
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'recipient_type'    => 'individual',
-            'to'                => $recipient,
-            'type'              => 'template',
-            'template'          => [
-                'name'       => $settings->wa_template_name,
-                'language'   => ['code' => 'es_CO'],
-                'components' => [
-                    [
-                        'type'       => 'header',
-                        'parameters' => [[
-                            'type'     => 'document',
-                            'document' => [
-                                'link'     => $pdfUrl,
-                                'filename' => 'carnet.pdf',
-                            ],
-                        ]],
+        $components = [
+            [
+                'type'       => 'header',
+                'parameters' => [[
+                    'type'     => 'document',
+                    'document' => [
+                        'link'     => $pdfUrl,
+                        'filename' => 'carnet.pdf',
                     ],
-                    [
-                        'type'       => 'body',
-                        'parameters' => [[
-                            'type' => 'text',
-                            'text' => $nombreCompleto,
-                        ]],
-                    ],
-                ],
+                ]],
+            ],
+            [
+                'type'       => 'body',
+                'parameters' => [[
+                    'type' => 'text',
+                    'text' => $nombreCompleto,
+                ]],
             ],
         ];
 
-        $apiUrl = "https://graph.facebook.com/{$settings->wa_api_version}/{$settings->wa_phone_number_id}/messages";
-        try {
-            $http         = Http::withToken($settings->wa_bearer_token);
-            if (app()->environment('local')) {
-                $http = $http->withoutVerifying();
-            }
-            $response     = $http->post($apiUrl, $payload);
-            $responseData = $response->json();
-        } catch (\Throwable $e) {
-            return response()->json(['message' => 'Error al contactar la API de WhatsApp'], 500);
-        }
+        $resultado = $this->whatsapp->enviarPlantilla(
+            $affiliate->movil,
+            $settings->wa_template_name,
+            $components,
+            'carnet',
+        );
 
-        WhatsappMessage::create([
-            'response'     => json_encode($responseData),
-            'recipient_id' => $recipient,
-            'deleted'      => 0,
-            'type'         => 'carnet',
-        ]);
-
-        if (!empty($responseData['messages'][0]['id'])) {
+        if ($resultado['enviado']) {
             $affiliate->carnet = 'si';
             $affiliate->save();
 
             return response()->json([
                 'message' => 'Carnet enviado exitosamente',
-                'data'    => $responseData,
+                'data'    => $resultado['response'],
             ], 200);
         }
 
         return response()->json([
             'message' => 'Envío fallido',
-            'error'   => $responseData,
+            'error'   => $resultado['response'] ?? $resultado['detalle'] ?? null,
         ], 422);
     }
 

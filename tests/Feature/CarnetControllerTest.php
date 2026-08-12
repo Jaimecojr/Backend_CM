@@ -41,4 +41,20 @@ class CarnetControllerTest extends TestCase
             return $request['template']['language']['code'] === 'es_CO';
         });
     }
+
+    public function test_send_retorna_422_cuando_el_envio_falla(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['error' => ['message' => 'rechazado']], 400),
+        ]);
+
+        $this->crearSettingCompleto();
+        $admin     = User::factory()->create(['type' => 1]);
+        $affiliate = Affiliate::factory()->create();
+
+        $response = $this->actingAs($admin)->postJson("/api/affiliates/{$affiliate->id}/carnet");
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('message', 'Envío fallido');
+    }
 }
