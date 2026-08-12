@@ -54,7 +54,14 @@ class WhatsAppClient
             $response     = $http->post($apiUrl, $payload);
             $responseData = $response->json();
         } catch (\Throwable $e) {
-            return ['enviado' => false, 'detalle' => 'Error al contactar la API de WhatsApp'];
+            WhatsappMessage::create([
+                'response'     => json_encode(['error' => $e->getMessage()]),
+                'recipient_id' => $recipient,
+                'deleted'      => 0,
+                'type'         => $tipoRegistro,
+            ]);
+
+            return ['enviado' => false, 'detalle' => 'Error al contactar la API de WhatsApp: ' . $e->getMessage()];
         }
 
         WhatsappMessage::create([

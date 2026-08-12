@@ -76,5 +76,10 @@ class WhatsAppClientTest extends TestCase
         );
 
         $this->assertFalse($resultado['enviado']);
+
+        $this->assertDatabaseHas('whatsapp_messages', [
+            'recipient_id' => '573001234567',
+            'type'         => 'carnet',
+        ]);
     }
 }
