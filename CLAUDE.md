@@ -118,13 +118,14 @@ if ($search) {
 - `payment_date`: Fecha de venta / última transacción. Se establece al crear y se actualiza al registrar una renovación.
 - `value`: Valor del plan. `balance`: Saldo pendiente. `commission`: Comisión del asesor. `payment_commission` (`si`/`no`): si la comisión fue pagada. Todos viven directamente en la tabla `affiliates` — **no hay tabla separada de pagos**.
 - El registro de renovaciones se guarda en una tabla separada llamada `renovations`. La tabla `renovations` **no** almacena balance, comisión ni pago de comisión — esos datos son del afiliado, no de la renovación.
+- `movil`: **excepción a la regla general de validación** (ver tabla abajo) — la columna `affiliates.movil` es `NOT NULL` sin default porque un afiliado siempre debe tener un celular de contacto. Por eso `AffiliateController::store()` valida `movil` como `'required|digits:10'`, no `'nullable|digits:10'`. `update()` usa `'sometimes|required|digits:10'` (permite edición parcial sin reenviar el campo, pero si se envía no puede ser `null`/vacío — mismo patrón en `name`, `lastname`, `id_card`, `validity_end`, todas columnas NOT NULL). **No revertir `store()` ni `update()` a `nullable`** — antes de esta regla, crear o actualizar un afiliado con `movil` vacío producía un error 500 de SQL (violación NOT NULL) en vez de un 400 de validación.
 
 ## Reglas de Validación de Campos Comunes
 Al definir las reglas del `Validator::make()` en cualquier controlador, aplica siempre:
 
 | Campo | Regla Laravel |
 |---|---|
-| `movil` (celular) | `'nullable\|digits:10'` — exactamente 10 dígitos numéricos |
+| `movil` (celular) | `'nullable\|digits:10'` — exactamente 10 dígitos numéricos. **Excepción:** `AffiliateController::store()` usa `'required\|digits:10'` (ver sección Afiliados arriba) porque la columna es `NOT NULL`. |
 | `phone` (teléfono) | `'nullable\|string\|max:255'` — libre (la restricción de formato es solo frontend) |
 | `value_agreement` / `amount` (valor) | `'required\|numeric\|min:10000'` o `'nullable\|numeric\|min:10000'` según si es obligatorio |
 
@@ -207,6 +208,29 @@ Todos los parámetros WA viven en la tabla `settings` (singleton — siempre hay
 - **SSL local:** Usar `Http::withoutVerifying()` en entorno `local` para evitar error de certificado SSL de cURL en Windows. En producción verifica SSL normalmente.
 - **`wa_bearer_token`:** Validar sin `max:255` — la regla correcta es `'required|string'` (sin límite de longitud).
 
+## Arquitectura: Servicios y Helpers Reutilizables
+
+Tras la revisión de arquitectura del backend, la lógica repetida entre controladores se centralizó en los siguientes puntos únicos de verdad. **No reintroducir duplicados de esta lógica en controladores nuevos o existentes.**
+
+### `app/Services/WhatsAppClient.php`
+Única fuente de verdad para el envío de mensajes de WhatsApp. Se inyecta por constructor (`private WhatsAppClient $whatsapp`) en los controladores que lo necesitan (`CarnetController`, `AppointmentController`, `WhatsAppWebhookController`).
+- **`enviarPlantilla(string $telefonoLocal, string $templateName, array $components, string $tipoRegistro): array`** — usado para carnets y notificaciones de cita. Antepone `'57'` internamente (espera el número LOCAL, sin prefijo de país), registra siempre el resultado en `whatsapp_messages` (éxito o fallo) y retorna `['enviado' => bool, 'response'?, 'detalle'?]`.
+- **`enviarTexto(string $telefonoConPrefijo, string $texto): void`** — usado solo por el autoreply del webhook (`WhatsAppWebhookController`). Espera el número YA con el prefijo de país (viene tal cual del campo `from` de Meta), no registra nada en `whatsapp_messages`, no retorna nada y silencia cualquier error (Meta ya recibió el 200 de confirmación del webhook, reintentar no tiene sentido).
+- **`configuracionParaPlantilla(string $campoPlantilla): ?Setting`** — retorna el `Setting` si la configuración básica (`wa_api_version`, `wa_phone_number_id`, `wa_bearer_token`) y el campo de plantilla indicado (`wa_template_name` o `wa_appointment_template_name`) están completos; `null` si falta algo. Los controladores deben usar este método antes de armar el payload de una plantilla — **no repetir el chequeo manual de `Setting::first()` + campos vacíos**.
+- El código de idioma `es_CO` vive fijo dentro de la clase — no debe duplicarse en ningún controlador.
+
+### `User::esSuperAdmin(): bool`
+Punto único para verificar si el usuario autenticado es super administrador (`type === 1`). Usado en `AffiliateController`, `AffiliateNoteController`, `AgreementController`, `AppointmentController` y `DashboardController`. **No volver a escribir `$user->type === 1` inline** en ningún controlador nuevo — llamar siempre a `$user->esSuperAdmin()`.
+
+### Scopes de vigencia en `Affiliate`
+El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade` + `validity_end` usadas en distintos módulos — usarlos en vez de escribir la condición a mano:
+- **`scopeActivosVencidos()`** — `stade = 1` y `validity_end < hoy`. Usado por el comando `affiliates:update-expired`.
+- **`scopeActivosVencenHoy()`** — `stade = 1` y `validity_end = hoy`. Usado por `AffiliateController::expiringToday()`.
+- **`scopeInactivosPorVencimiento()`** — `stade = 2` y `validity_end < hoy`. Usado por `DashboardController::stats()` (métrica `inactive_by_expiry`).
+
+### `AuthController`
+Login y logout viven en `app/Http/Controllers/AuthController.php` (métodos `login`/`logout`), registrados en `routes/web.php` (`POST /login`, `POST /logout`). Ya no son closures inline en el archivo de rutas — la lógica de la cookie `auth_hint` (ver sección arriba) vive dentro de estos métodos.
+
 ## Envío de Carnets por WhatsApp
 
 ### Controlador
@@ -218,13 +242,12 @@ Todos los parámetros WA viven en la tabla `settings` (singleton — siempre hay
 ### Flujo del método `send($id)`
 1. Busca afiliado con `Affiliate::with('beneficiaries')->find($id)` — 404 si no existe
 2. Valida `movil` con `preg_match('/^\d{10}$/')` — 422 si inválido
-3. Verifica los 4 campos de WhatsApp en `Setting::first()` — 500 si incompletos
+3. Verifica la configuración de WhatsApp con `$this->whatsapp->configuracionParaPlantilla('wa_template_name')` — 500 si incompleta (ver sección "Arquitectura: Servicios y Helpers Reutilizables" arriba; el controlador ya no repite el chequeo manual de `Setting::first()`)
 4. Valida que `validity_end` no sea null — 422 si vacío
 5. Franquicias: `User::where('state', 1)->where('type', 2)->get()`
 6. Genera PDF con FPDI sobre `resources/pdf/carnet.pdf`, guarda en `storage/app/public/carnets/carnet_{id}_{timestamp}.pdf`
-7. Envía via WhatsApp Cloud API con template (`header: document`, `body: text`), `type = 'carnet'`
-8. Registra en `whatsapp_messages` siempre (éxito o fallo)
-9. Si `messages[0].id` en respuesta → `affiliate->carnet = 'si'`, retorna 200
+7. Envía via `WhatsAppClient::enviarPlantilla()` con template (`header: document`, `body: text`) y `tipoRegistro = 'carnet'` — el servicio arma el payload, llama a la API de Meta y registra el resultado en `whatsapp_messages` internamente (éxito o fallo); el controlador ya no llama a la API ni inserta en `whatsapp_messages` directamente
+8. Si el resultado retornado por `enviarPlantilla()` trae `enviado = true` (Meta confirmó con `messages[0].id`) → `affiliate->carnet = 'si'`, retorna 200
 
 ### Consideraciones importantes
 - **Timestamp en filename:** Garantiza URL única en cada envío para evitar que Meta sirva versión cacheada del PDF anterior.

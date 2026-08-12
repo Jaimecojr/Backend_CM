@@ -12,19 +12,16 @@ class DashboardController extends Controller
 {
     public function stats()
     {
-        if (auth()->user()->type !== 1) {
+        if (!auth()->user()->esSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
-        $hoy       = Carbon::today()->toDateString();
         $inicioMes = Carbon::now()->startOfMonth()->toDateString();
         $finMes    = Carbon::now()->endOfMonth()->toDateString();
 
         $active           = Affiliate::where('stade', 1)->count();
         $inactive         = Affiliate::where('stade', 2)->count();
-        $inactiveByExpiry = Affiliate::where('stade', 2)
-                                ->where('validity_end', '<', $hoy)
-                                ->count();
+        $inactiveByExpiry = Affiliate::inactivosPorVencimiento()->count();
         $thisMonth = Appointment::whereBetween('date', [$inicioMes, $finMes])->count();
 
         return response()->json([
@@ -59,7 +56,7 @@ class DashboardController extends Controller
             ->whereYear('payment_date', $year)
             ->groupBy('mes');
 
-        if ($user->type !== 1) {
+        if (!$user->esSuperAdmin()) {
             $apptQuery->where('user_id', $user->id);
             $affilQuery->where('user_id', $user->id);
         }
@@ -79,7 +76,7 @@ class DashboardController extends Controller
             'affiliates_by_month'   => $affiliatesByMonth,
         ];
 
-        if ($user->type === 1) {
+        if ($user->esSuperAdmin()) {
             $franchises   = User::where('type', 2)->where('state', 1)->get(['id', 'name']);
             $franchiseIds = $franchises->pluck('id');
 

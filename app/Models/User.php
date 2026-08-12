@@ -64,6 +64,13 @@ class User extends Authenticatable
         return 'user';
     }
 
+    // Super admin: único rol con acceso a métricas globales, gestión de
+    // convenios/notas y sin restricción de "solo ver mis propios registros".
+    public function esSuperAdmin(): bool
+    {
+        return $this->type === 1;
+    }
+
     // Relación con City
     public function city()
     {

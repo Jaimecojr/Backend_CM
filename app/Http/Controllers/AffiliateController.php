@@ -72,7 +72,7 @@ class AffiliateController extends Controller
             'bithdate'           => 'nullable|date',
             'id_card'            => 'required|string|max:50',
             'phone'              => 'nullable|string|max:50',
-            'movil'              => 'nullable|string|max:50',
+            'movil'              => 'required|digits:10',
             'address'            => 'nullable|string|max:150',
             'city_id'            => 'required|exists:cities,id',
             'email'              => 'nullable|email|max:100',
@@ -163,12 +163,12 @@ class AffiliateController extends Controller
         $validator = Validator::make($request->all(), [
             'counselor_id'       => 'nullable|exists:counselors,id',
             'contract_code'      => 'nullable|string|max:100',
-            'name'               => 'nullable|string|max:100',
-            'lastname'           => 'nullable|string|max:100',
+            'name'               => 'sometimes|required|string|max:100',
+            'lastname'           => 'sometimes|required|string|max:100',
             'bithdate'           => 'nullable|date',
-            'id_card'            => 'nullable|string|max:50',
+            'id_card'            => 'sometimes|required|string|max:50',
             'phone'              => 'nullable|string|max:50',
-            'movil'              => 'nullable|string|max:50',
+            'movil'              => 'sometimes|required|digits:10',
             'address'            => 'nullable|string|max:150',
             'city_id'            => 'nullable|exists:cities,id',
             'email'              => 'nullable|email|max:100',
@@ -177,7 +177,7 @@ class AffiliateController extends Controller
             'company'            => 'nullable|string|max:150',
             'photo'              => 'nullable|string',
             'photo_rename'       => 'nullable|string',
-            'validity_end'       => 'nullable|date',
+            'validity_end'       => 'sometimes|required|date',
             'stade'              => 'nullable|integer',
             'carnet'             => 'nullable|in:si,no',
             'state'              => 'nullable|integer',
@@ -262,10 +262,9 @@ class AffiliateController extends Controller
 
         $query = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'movil', 'phone', 'validity_end', 'stade'])
             ->with(['counselor:id,name,lastname', 'agreement:id,name'])
-            ->where('stade', 1)
-            ->where('validity_end', $hoy);
+            ->activosVencenHoy();
 
-        if (auth()->user()->type !== 1) {
+        if (!auth()->user()->esSuperAdmin()) {
             $query->where('user_id', auth()->id());
         }
 
