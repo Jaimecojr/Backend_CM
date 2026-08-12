@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\Setting;
 use App\Services\WhatsAppClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -218,14 +217,8 @@ class AppointmentController extends Controller
         }
 
         // Validar configuración de WhatsApp
-        $settings = Setting::first();
-        if (
-            !$settings ||
-            empty($settings->wa_api_version) ||
-            empty($settings->wa_phone_number_id) ||
-            empty($settings->wa_bearer_token) ||
-            empty($settings->wa_appointment_template_name)
-        ) {
+        $settings = $this->whatsapp->configuracionParaPlantilla('wa_appointment_template_name');
+        if (!$settings) {
             return ['enviado' => false, 'detalle' => 'Configuración de WhatsApp incompleta'];
         }
 

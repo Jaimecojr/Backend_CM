@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Affiliate;
-use App\Models\Setting;
 use App\Models\User;
 use App\Services\WhatsAppClient;
 use Illuminate\Support\Facades\Storage;
@@ -26,14 +25,8 @@ class CarnetController extends Controller
             return response()->json(['message' => 'El celular del afiliado no es válido'], 422);
         }
 
-        $settings = Setting::first();
-        if (
-            !$settings ||
-            empty($settings->wa_api_version) ||
-            empty($settings->wa_phone_number_id) ||
-            empty($settings->wa_bearer_token) ||
-            empty($settings->wa_template_name)
-        ) {
+        $settings = $this->whatsapp->configuracionParaPlantilla('wa_template_name');
+        if (!$settings) {
             return response()->json(['message' => 'Configuración de WhatsApp incompleta'], 500);
         }
 
@@ -54,7 +47,6 @@ class CarnetController extends Controller
             return response()->json(['message' => 'Error al generar el carnet'], 500);
         }
 
-        $recipient = '57' . $affiliate->movil;
         $pdfUrl    = config('app.url') . '/storage/' . $relativePath;
         $nombreCompleto = strtoupper($affiliate->name . ' ' . $affiliate->lastname);
 

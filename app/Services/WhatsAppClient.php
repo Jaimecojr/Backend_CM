@@ -14,10 +14,11 @@ class WhatsAppClient
      * registra el resultado en whatsapp_messages. El código de idioma es
      * siempre 'es_CO' — Meta rechaza 'es' con el error #132001.
      *
+     * @param  string  $telefonoLocal  Número LOCAL sin prefijo de país (ej. "3001234567") — este método antepone '57' internamente. No pasar un número que ya incluya el prefijo, o terminará como "5757...".
      * @param  array<int, array<string, mixed>>  $components  Componentes de la plantilla (header/body de Meta).
      * @return array{enviado: bool, response?: array, detalle?: string}
      */
-    public function enviarPlantilla(string $telefono, string $templateName, array $components, string $tipoRegistro): array
+    public function enviarPlantilla(string $telefonoLocal, string $templateName, array $components, string $tipoRegistro): array
     {
         $settings = Setting::first();
 
@@ -25,7 +26,7 @@ class WhatsAppClient
             return ['enviado' => false, 'detalle' => 'Configuración de WhatsApp incompleta'];
         }
 
-        $recipient = '57' . $telefono;
+        $recipient = '57' . $telefonoLocal;
 
         $payload = [
             'messaging_product' => 'whatsapp',
@@ -70,8 +71,10 @@ class WhatsAppClient
      * de enviarPlantilla(), no registra en whatsapp_messages y no retorna
      * nada — los errores se ignoran a propósito (Meta ya recibió el 200 de
      * confirmación del webhook, no tiene sentido reintentar).
+     *
+     * @param  string  $telefonoConPrefijo  Número YA con el prefijo de país incluido (ej. "573001234567") — viene tal cual del campo `from` del webhook de Meta. No anteponer '57' de nuevo.
      */
-    public function enviarTexto(string $telefono, string $texto): void
+    public function enviarTexto(string $telefonoConPrefijo, string $texto): void
     {
         $settings = Setting::first();
 
@@ -82,7 +85,7 @@ class WhatsAppClient
         $payload = [
             'messaging_product' => 'whatsapp',
             'recipient_type'    => 'individual',
-            'to'                => $telefono,
+            'to'                => $telefonoConPrefijo,
             'type'              => 'text',
             'text'              => ['body' => $texto],
         ];
@@ -92,6 +95,23 @@ class WhatsAppClient
         } catch (\Throwable) {
             // Silencioso — Meta ya recibió el 200, no reintentar.
         }
+    }
+
+    /**
+     * Retorna el Setting si la configuración básica de WhatsApp está completa
+     * Y el campo de plantilla indicado también lo está; null si falta algo.
+     * Los controladores usan esto en vez de repetir su propio chequeo antes
+     * de llamar a enviarPlantilla().
+     */
+    public function configuracionParaPlantilla(string $campoPlantilla): ?Setting
+    {
+        $settings = Setting::first();
+
+        if (!$this->configuracionBasicaCompleta($settings) || empty($settings->{$campoPlantilla})) {
+            return null;
+        }
+
+        return $settings;
     }
 
     /**
