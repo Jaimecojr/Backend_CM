@@ -118,7 +118,7 @@ if ($search) {
 - `payment_date`: Fecha de venta / última transacción. Se establece al crear y se actualiza al registrar una renovación.
 - `value`: Valor del plan. `balance`: Saldo pendiente. `commission`: Comisión del asesor. `payment_commission` (`si`/`no`): si la comisión fue pagada. Todos viven directamente en la tabla `affiliates` — **no hay tabla separada de pagos**.
 - El registro de renovaciones se guarda en una tabla separada llamada `renovations`. La tabla `renovations` **no** almacena balance, comisión ni pago de comisión — esos datos son del afiliado, no de la renovación.
-- `movil`: **excepción a la regla general de validación** (ver tabla abajo) — la columna `affiliates.movil` es `NOT NULL` sin default porque un afiliado siempre debe tener un celular de contacto. Por eso `AffiliateController::store()` valida `movil` como `'required|digits:10'`, no `'nullable|digits:10'`. `update()` sí lo deja `'nullable|digits:10'` (permite edición parcial sin reenviar el campo, igual que `id_card`). **No revertir `store()` a `nullable`** — antes de esta regla, crear un afiliado sin `movil` producía un error 500 de SQL (violación NOT NULL) en vez de un 400 de validación.
+- `movil`: **excepción a la regla general de validación** (ver tabla abajo) — la columna `affiliates.movil` es `NOT NULL` sin default porque un afiliado siempre debe tener un celular de contacto. Por eso `AffiliateController::store()` valida `movil` como `'required|digits:10'`, no `'nullable|digits:10'`. `update()` usa `'sometimes|required|digits:10'` (permite edición parcial sin reenviar el campo, pero si se envía no puede ser `null`/vacío — mismo patrón en `name`, `lastname`, `id_card`, `validity_end`, todas columnas NOT NULL). **No revertir `store()` ni `update()` a `nullable`** — antes de esta regla, crear o actualizar un afiliado con `movil` vacío producía un error 500 de SQL (violación NOT NULL) en vez de un 400 de validación.
 
 ## Reglas de Validación de Campos Comunes
 Al definir las reglas del `Validator::make()` en cualquier controlador, aplica siempre:
@@ -220,7 +220,7 @@ Tras la revisión de arquitectura del backend, la lógica repetida entre control
 - El código de idioma `es_CO` vive fijo dentro de la clase — no debe duplicarse en ningún controlador.
 
 ### `User::esSuperAdmin(): bool`
-Punto único para verificar si el usuario autenticado es super administrador (`type === 1`). Usado en `AffiliateController`, `AppointmentController` y `DashboardController`. **No volver a escribir `$user->type === 1` inline** en ningún controlador nuevo — llamar siempre a `$user->esSuperAdmin()`.
+Punto único para verificar si el usuario autenticado es super administrador (`type === 1`). Usado en `AffiliateController`, `AffiliateNoteController`, `AgreementController`, `AppointmentController` y `DashboardController`. **No volver a escribir `$user->type === 1` inline** en ningún controlador nuevo — llamar siempre a `$user->esSuperAdmin()`.
 
 ### Scopes de vigencia en `Affiliate`
 El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade` + `validity_end` usadas en distintos módulos — usarlos en vez de escribir la condición a mano:
