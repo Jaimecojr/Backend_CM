@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\Exceptions\HttpResponseException;
 
+/**
+ * Sin override de failedValidation(): a diferencia de Affiliate/User, este
+ * endpoint ya tenía tráfico real desde frontend-cm antes de la Tarea 15, y su
+ * comportamiento original (Validator::make() manual) devolvía 422 en fallos
+ * de validación — no 400 como el resto de la app. Se preserva ese contrato
+ * de API dejando que FormRequest use el comportamiento por defecto de
+ * Laravel (ValidationException -> 422), en vez de alinearlo con la
+ * convención de 400 usada en los demás módulos. Ver task-15-report.md.
+ */
 class StoreAppointmentRequest extends FormRequest
 {
     public function authorize(): bool
@@ -30,13 +37,5 @@ class StoreAppointmentRequest extends FormRequest
             'name'      => 'required|string|max:255',
             'user_id'   => 'required|exists:users,id',
         ];
-    }
-
-    protected function failedValidation(Validator $validator): void
-    {
-        throw new HttpResponseException(response()->json([
-            'message' => 'Error de validación',
-            'errors' => $validator->errors(),
-        ], 400));
     }
 }

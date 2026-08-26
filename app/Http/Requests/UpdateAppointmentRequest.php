@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\Exceptions\HttpResponseException;
 
+/**
+ * Sin override de failedValidation(): ver nota en StoreAppointmentRequest.
+ * Se preserva el contrato de API original (422, ValidationException por
+ * defecto de Laravel) porque este endpoint tiene tráfico real desde
+ * frontend-cm y ese era su comportamiento antes de la Tarea 15.
+ */
 class UpdateAppointmentRequest extends FormRequest
 {
     public function authorize(): bool
@@ -30,13 +34,5 @@ class UpdateAppointmentRequest extends FormRequest
             'name'      => 'required|string|max:255',
             'user_id'   => 'required|exists:users,id',
         ];
-    }
-
-    protected function failedValidation(Validator $validator): void
-    {
-        throw new HttpResponseException(response()->json([
-            'message' => 'Error de validación',
-            'errors' => $validator->errors(),
-        ], 400));
     }
 }

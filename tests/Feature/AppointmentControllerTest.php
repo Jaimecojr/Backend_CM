@@ -50,20 +50,12 @@ class AppointmentControllerTest extends TestCase
             'name' => 'Sin los demás campos',
         ]);
 
-        // NOTA: antes de la Tarea 15 este endpoint devolvía 422 (Validator::make()
-        // manual sin override). El resto de la app usa 400 para fallos de
-        // validación (ver CLAUDE.md / Tareas 5, 6-9, 14); este test documenta el
-        // cambio intencional a 400 al migrar a StoreAppointmentRequest.
-        $response->assertStatus(400);
-    }
-
-    public function test_store_retorna_400_no_422_en_validacion_fallida(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->postJson('/api/appointments', []);
-
-        $response->assertStatus(400);
+        // Este endpoint conserva 422 (comportamiento original, default de
+        // FormRequest sin override) porque tiene tráfico real desde
+        // frontend-cm — a diferencia de Affiliate/User, no se alinea con la
+        // convención de 400 del resto de la app. Ver StoreAppointmentRequest
+        // y task-15-report.md.
+        $response->assertStatus(422);
     }
 
     public function test_index_normaliza_owner_segun_type(): void
