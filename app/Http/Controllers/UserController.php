@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Validator;
 class UserController extends Controller
 {
     /**
-     * Mostrar todos los usuarios
+     * Display all users
      */
     public function index()
     {
@@ -34,26 +34,26 @@ class UserController extends Controller
     }
 
     /**
-     * Crear un nuevo usuario
+     * Create a new user
      */
     public function store(StoreUserRequest $request)
     {
-        $datos = $request->validated();
+        $data = $request->validated();
 
         $user = User::create([
-            'nit' => $datos['nit'],
-            'name' => $datos['name'],
-            'contact' => $datos['contact'] ?? null,
-            'phone' => $datos['phone'] ?? null,
-            'movil' => $datos['movil'] ?? null,
-            'address' => $datos['address'] ?? null,
-            'date_afi' => $datos['date_afi'] ?? null,
-            'email' => $datos['email'],
-            'user' => $datos['user'],
-            'password' => Hash::make($datos['password']),
-            'state' => $datos['state'] ?? 1,
-            'city_id' => $datos['city_id'],
-            'type' => $datos['type'] ?? 2,
+            'nit' => $data['nit'],
+            'name' => $data['name'],
+            'contact' => $data['contact'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'movil' => $data['movil'] ?? null,
+            'address' => $data['address'] ?? null,
+            'date_afi' => $data['date_afi'] ?? null,
+            'email' => $data['email'],
+            'user' => $data['user'],
+            'password' => Hash::make($data['password']),
+            'state' => $data['state'] ?? 1,
+            'city_id' => $data['city_id'],
+            'type' => $data['type'] ?? 2,
         ]);
 
         return response()->json([
@@ -63,7 +63,7 @@ class UserController extends Controller
     }
 
     /**
-     * Mostrar un usuario específico
+     * Display a specific user
      */
     public function show($id)
     {
@@ -82,7 +82,7 @@ class UserController extends Controller
     }
 
     /**
-     * Actualizar un usuario existente
+     * Update an existing user
      */
     public function update(UpdateUserRequest $request, $id)
     {
@@ -94,10 +94,10 @@ class UserController extends Controller
             ], 404);
         }
 
-        // Se usa $request->filled() sobre el propio FormRequest (extiende Request)
-        // en vez de $request->validated() para preservar exactamente la semántica
-        // original: solo se asigna un campo si viene "lleno" (no null, no ''), no
-        // basta con que la clave exista en el array validado.
+        // $request->filled() is used on the FormRequest itself (extends Request)
+        // instead of $request->validated() to preserve exactly the original
+        // semantics: a field is only assigned if it comes "filled" (not null, not ''),
+        // it is not enough for the key to just exist in the validated array.
         if ($request->filled('nit'))
             $user->nit = $request->nit;
         if ($request->filled('name'))
@@ -134,7 +134,7 @@ class UserController extends Controller
     }
 
     /**
-     * Eliminar un usuario
+     * Delete a user
      */
     public function destroy($id)
     {
@@ -154,7 +154,7 @@ class UserController extends Controller
     }
 
     /**
-     * Cambiar la contraseña del usuario autenticado
+     * Change the authenticated user's password
      */
     public function changePassword(Request $request)
     {
@@ -202,8 +202,8 @@ class UserController extends Controller
     }
 
     /**
-     * Franquicias activas para el sitio web público (footer).
-     * Solo expone nombre, dirección y ciudad; nunca datos internos (NIT, email, teléfono).
+     * Active franchises for the public website (footer).
+     * Only exposes name, address, and city; never internal data (NIT, email, phone).
      */
     public function publicActiveFranchises()
     {

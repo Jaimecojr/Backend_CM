@@ -13,13 +13,13 @@ class UserProperty extends Model
 
     protected $fillable = ['module_id', 'counselor_id', 'property'];
 
-    // Relación con Modulos
+    // Relationship with Modules
     public function modules()
     {
         return $this->belongsTo(Module::class);
     }
 
-    // Relación con Vendedores
+    // Relationship with Counselors
     public function counselor()
     {
         return $this->belongsTo(Counselor::class);

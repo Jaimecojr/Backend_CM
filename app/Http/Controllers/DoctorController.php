@@ -63,8 +63,8 @@ class DoctorController extends Controller
     }
 
     /**
-     * Médicos activos filtrados por especialidad — para el selector de citas.
-     * Sin paginación, sin cargar specialty, solo los campos necesarios.
+     * Active doctors filtered by specialty — for the appointment selector.
+     * No pagination, no loading of specialty, only the necessary fields.
      */
     public function bySpecialty(Request $request)
     {
@@ -89,7 +89,7 @@ class DoctorController extends Controller
     }
 
     /**
-     * Listado público para el sitio web — solo médicos activos, sin datos internos.
+     * Public listing for the website — only active doctors, no internal data.
      */
     public function publicIndex(Request $request)
     {

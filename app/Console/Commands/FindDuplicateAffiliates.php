@@ -38,7 +38,7 @@ class FindDuplicateAffiliates extends Command
         $totalNotesToDelete        = 0;
 
         foreach ($duplicateCards as $dup) {
-            // Criterio: stade=1 primero, luego validity_end más reciente, luego id más alto
+            // Criteria: stade=1 first, then most recent validity_end, then highest id
             $affiliates = Affiliate::with(['beneficiaries', 'renovations', 'notes', 'counselor', 'agreement'])
                 ->where('id_card', $dup->id_card)
                 ->orderByRaw('CASE WHEN stade = 1 THEN 0 ELSE 1 END ASC')
@@ -75,7 +75,7 @@ class FindDuplicateAffiliates extends Command
             ];
         }
 
-        // Resumen en consola
+        // Console summary
         $this->newLine();
         $this->line('  <fg=yellow>RESUMEN DEL ANÁLISIS</>');
         $this->newLine();
@@ -90,7 +90,7 @@ class FindDuplicateAffiliates extends Command
             ]
         );
 
-        // Distribución por tamaño de grupo
+        // Distribution by group size
         $bySize = collect($groups)->groupBy(fn($g) => $g['total'])->map->count();
         $this->newLine();
         $this->line('  <fg=yellow>DISTRIBUCIÓN POR TAMAÑO DE GRUPO</>');
@@ -100,7 +100,7 @@ class FindDuplicateAffiliates extends Command
         }
         $this->table(['Duplicación', 'Cantidad de id_card'], $rows);
 
-        // Generar reporte HTML
+        // Generate HTML report
         $outputPath = $this->option('output') ?? storage_path('app/duplicados_afiliados.html');
         $html = $this->buildHtml($groups, $duplicateCards->count(), $totalAffiliatesToDelete, $totalBeneficiariesToDelete, $totalRenovationsToDelete, $totalNotesToDelete);
 
@@ -118,7 +118,7 @@ class FindDuplicateAffiliates extends Command
         int $totalRenov,
         int $totalNotes
     ): string {
-        $fecha    = now()->format('d/m/Y H:i');
+        $date     = now()->format('d/m/Y H:i');
         $rows     = '';
 
         foreach ($groups as $g) {
@@ -257,7 +257,7 @@ class FindDuplicateAffiliates extends Command
 
   <div class="page-header">
     <h1>Afiliados Duplicados — <span class="accent">Análisis de Datos</span></h1>
-    <div class="meta">Generado el {$fecha} &nbsp;|&nbsp; Contacto Médico &nbsp;|&nbsp; Solo lectura — ningún registro fue modificado</div>
+    <div class="meta">Generado el {$date} &nbsp;|&nbsp; Contacto Médico &nbsp;|&nbsp; Solo lectura — ningún registro fue modificado</div>
   </div>
 
   <div class="stats-grid">

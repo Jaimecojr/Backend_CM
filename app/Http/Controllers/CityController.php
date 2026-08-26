@@ -12,11 +12,11 @@ use Illuminate\Http\Request;
 class CityController extends Controller
 {
     /**
-     * Devuelve todas las ciudades de un departamento específico
+     * Returns all cities of a specific department
      */
     public function getByDepartment(Department $department): JsonResponse
     {
-        // Carga las ciudades asociadas
+        // Load the associated cities
         $cities = $department->cities()->get(['id', 'name', 'department_id']);
 
         if ($cities->isEmpty()) {

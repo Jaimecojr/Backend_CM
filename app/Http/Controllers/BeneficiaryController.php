@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Validator;
 class BeneficiaryController extends Controller
 {
     /**
-     * Mostrar todos los beneficiarios
+     * Show all beneficiaries
      */
     public function index()
     {
@@ -31,7 +31,7 @@ class BeneficiaryController extends Controller
     }
 
     /**
-     * Crear un nuevo beneficiario
+     * Create a new beneficiary
      */
     public function store(Request $request)
     {
@@ -58,7 +58,7 @@ class BeneficiaryController extends Controller
     }
 
     /**
-     * Mostrar un beneficiario específico
+     * Show a specific beneficiary
      */
     public function show($id)
     {
@@ -77,7 +77,7 @@ class BeneficiaryController extends Controller
     }
 
     /**
-     * Actualizar un beneficiario existente
+     * Update an existing beneficiary
      */
     public function update(Request $request, $id)
     {
@@ -112,7 +112,7 @@ class BeneficiaryController extends Controller
     }
 
     /**
-     * Eliminar un beneficiario
+     * Delete a beneficiary
      */
     public function destroy($id)
     {

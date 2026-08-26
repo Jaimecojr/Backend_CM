@@ -28,19 +28,19 @@ class Counselor extends Model
         'user_id',
     ];
 
-    // Relación con City
+    // Relationship with City
     public function city()
     {
         return $this->belongsTo(City::class);
     }
 
-    // Relación con User / franquicia
+    // Relationship with User / franchise
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Relación: un vendedor tiene muchas afiliados
+    // Relationship: a counselor has many affiliates
     public function affiliates()
     {
         return $this->hasMany(Affiliate::class);

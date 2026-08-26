@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 class AffiliateNoteController extends Controller
 {
     /**
-     * Listar notas de un afiliado (más recientes primero)
+     * List notes of an affiliate (most recent first)
      */
     public function index(Affiliate $affiliate)
     {
@@ -27,7 +27,7 @@ class AffiliateNoteController extends Controller
     }
 
     /**
-     * Crear una nota nueva
+     * Create a new note
      */
     public function store(Request $request, Affiliate $affiliate)
     {
@@ -49,18 +49,18 @@ class AffiliateNoteController extends Controller
     }
 
     /**
-     * Eliminar una nota (solo usuarios tipo 1)
+     * Delete a note (type 1 users only)
      */
     public function destroy(Request $request, Affiliate $affiliate, AffiliateNote $note)
     {
-        // Solo super admin (type == 1) puede eliminar
+        // Only super admin (type == 1) can delete
         if (!$request->user()->isSuperAdmin()) {
             return response()->json([
                 'message' => 'No tienes permisos para eliminar notas.',
             ], 403);
         }
 
-        // Verificar que la nota pertenece al afiliado
+        // Verify that the note belongs to the affiliate
         if ($note->affiliate_id !== $affiliate->id) {
             return response()->json(['message' => 'Nota no encontrada.'], 404);
         }

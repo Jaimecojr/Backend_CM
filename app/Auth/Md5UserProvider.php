@@ -13,7 +13,7 @@ class Md5UserProvider extends EloquentUserProvider
     {
         $stored = $user->getAuthPassword();
 
-        // Contraseñas nuevas usan bcrypt (empieza con $2y$); las del sistema anterior son MD5
+        // New passwords use bcrypt (starts with $2y$); passwords from the legacy system are MD5
         if (str_starts_with($stored, '$2y$') || str_starts_with($stored, '$2a$')) {
             return $this->hasher->check($credentials['password'], $stored);
         }

@@ -7,10 +7,10 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Sin override de failedValidation(): ver nota en StoreAppointmentRequest.
- * Se preserva el contrato de API original (422, ValidationException por
- * defecto de Laravel) porque este endpoint tiene tráfico real desde
- * frontend-cm y ese era su comportamiento antes de la Tarea 15.
+ * No failedValidation() override: see note in StoreAppointmentRequest.
+ * The original API contract is preserved (422, Laravel's default
+ * ValidationException) because this endpoint has real traffic from
+ * frontend-cm and that was its behavior before Task 15.
  */
 class UpdateAppointmentRequest extends FormRequest
 {

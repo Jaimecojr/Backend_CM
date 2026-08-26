@@ -27,7 +27,7 @@ class Admin extends Model
     ];
 
 
-    // Relación con City
+    // Relationship with City
     public function city()
     {
         return $this->belongsTo(City::class);
