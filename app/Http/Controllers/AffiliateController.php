@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Affiliate;
+use App\Services\BeneficiarySyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 
 class AffiliateController extends Controller
 {
+    public function __construct(private BeneficiarySyncService $beneficiarySync)
+    {
+    }
+
     /**
      * Mostrar todos los afiliados
      */
@@ -111,15 +116,7 @@ class AffiliateController extends Controller
         ]));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
-            foreach ($request->beneficiaries as $ben) {
-                if (!empty($ben['name'])) {
-                    $affiliate->beneficiaries()->create([
-                        'name' => $ben['name'],
-                        'id_card' => $ben['id_card'] ?? '',
-                        'bithdate' => current(array_filter([$ben['bithdate'] ?? null])) ?: null,
-                    ]);
-                }
-            }
+            $this->beneficiarySync->sync($affiliate, $request->beneficiaries);
         }
 
         return response()->json([
@@ -213,27 +210,7 @@ class AffiliateController extends Controller
         ]));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
-            // Eliminar los beneficiarios que ya no estén en la lista enviada
-            $idsToKeep = array_filter(array_column($request->beneficiaries, 'id'));
-            $affiliate->beneficiaries()->whereNotIn('id', $idsToKeep)->delete();
-
-            foreach ($request->beneficiaries as $ben) {
-                if (!empty($ben['name'])) {
-                    if (!empty($ben['id'])) {
-                        $affiliate->beneficiaries()->where('id', $ben['id'])->update([
-                            'name' => $ben['name'],
-                            'id_card' => $ben['id_card'] ?? '',
-                            'bithdate' => current(array_filter([$ben['bithdate'] ?? null])) ?: null,
-                        ]);
-                    } else {
-                        $affiliate->beneficiaries()->create([
-                            'name' => $ben['name'],
-                            'id_card' => $ben['id_card'] ?? '',
-                            'bithdate' => current(array_filter([$ben['bithdate'] ?? null])) ?: null,
-                        ]);
-                    }
-                }
-            }
+            $this->beneficiarySync->sync($affiliate, $request->beneficiaries);
         }
 
         return response()->json([
