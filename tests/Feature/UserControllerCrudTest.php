@@ -28,6 +28,15 @@ class UserControllerCrudTest extends TestCase
         $this->assertDatabaseHas('users', ['user' => 'franquicianueva', 'type' => 2]);
     }
 
+    public function test_store_retorna_400_no_422_en_validacion_fallida(): void
+    {
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/users', []);
+
+        $response->assertStatus(400);
+    }
+
     public function test_store_rechaza_nit_duplicado(): void
     {
         $admin = User::factory()->create();

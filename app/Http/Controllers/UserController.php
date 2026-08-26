@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -34,45 +36,24 @@ class UserController extends Controller
     /**
      * Crear un nuevo usuario
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nit' => 'required|regex:/^\d+$/|max:100|unique:users,nit',
-            'name' => 'required|string|max:100',
-            'contact' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:50',
-            'movil' => 'nullable|digits:10',
-            'address' => 'nullable|string|max:150',
-            'date_afi' => 'nullable|date',
-            'email' => 'required|email|unique:users,email',
-            'user' => 'required|string|max:100|unique:users,user',
-            'password' => 'required|string|min:6',
-            'state' => 'nullable|in:1,2',
-            'city_id' => 'required|exists:cities,id',
-            'type' => 'nullable|in:1,2,3',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error en la validación',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
+        $datos = $request->validated();
 
         $user = User::create([
-            'nit' => $request->nit,
-            'name' => $request->name,
-            'contact' => $request->contact,
-            'phone' => $request->phone,
-            'movil' => $request->movil,
-            'address' => $request->address,
-            'date_afi' => $request->date_afi,
-            'email' => $request->email,
-            'user' => $request->user,
-            'password' => Hash::make($request->password),
-            'state' => $request->state ?? 1,
-            'city_id' => $request->city_id,
-            'type' => $request->type ?? 2,
+            'nit' => $datos['nit'],
+            'name' => $datos['name'],
+            'contact' => $datos['contact'] ?? null,
+            'phone' => $datos['phone'] ?? null,
+            'movil' => $datos['movil'] ?? null,
+            'address' => $datos['address'] ?? null,
+            'date_afi' => $datos['date_afi'] ?? null,
+            'email' => $datos['email'],
+            'user' => $datos['user'],
+            'password' => Hash::make($datos['password']),
+            'state' => $datos['state'] ?? 1,
+            'city_id' => $datos['city_id'],
+            'type' => $datos['type'] ?? 2,
         ]);
 
         return response()->json([
@@ -103,7 +84,7 @@ class UserController extends Controller
     /**
      * Actualizar un usuario existente
      */
-    public function update(Request $request, $id)
+    public function update(UpdateUserRequest $request, $id)
     {
         $user = User::find($id);
 
@@ -113,29 +94,10 @@ class UserController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'nit' => 'nullable|regex:/^\d+$/|max:100|unique:users,nit,' . $id,
-            'name' => 'nullable|string|max:100',
-            'contact' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:50',
-            'movil' => 'nullable|digits:10',
-            'address' => 'nullable|string|max:150',
-            'date_afi' => 'nullable|date',
-            'email' => 'nullable|email|unique:users,email,' . $id,
-            'user' => 'nullable|string|max:100|unique:users,user,' . $id,
-            'password' => 'nullable|string|min:6',
-            'state' => 'nullable|in:1,2',
-            'city_id' => 'nullable|exists:cities,id',
-            'type' => 'nullable|in:1,2,3',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error en la validación',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
+        // Se usa $request->filled() sobre el propio FormRequest (extiende Request)
+        // en vez de $request->validated() para preservar exactamente la semántica
+        // original: solo se asigna un campo si viene "lleno" (no null, no ''), no
+        // basta con que la clave exista en el array validado.
         if ($request->filled('nit'))
             $user->nit = $request->nit;
         if ($request->filled('name'))

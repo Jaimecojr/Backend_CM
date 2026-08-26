@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAppointmentRequest;
+use App\Http\Requests\UpdateAppointmentRequest;
 use App\Models\Appointment;
 use App\Services\WhatsAppClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class AppointmentController extends Controller
 {
@@ -88,30 +89,9 @@ class AppointmentController extends Controller
         //
     }
 
-    public function store(Request $request)
+    public function store(StoreAppointmentRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'afi_code'  => 'required|integer',
-            'doctor_id' => 'required|exists:doctors,id',
-            'date'      => 'required|date',
-            'hour'      => 'required|string|max:10',
-            'address'   => 'required|string|max:255',
-            'city_id'   => 'required|exists:cities,id',
-            'phone'     => 'nullable|string|max:255',
-            'value'     => 'required|numeric|min:10000',
-            'type'      => 'required|in:1,2',
-            'name'      => 'required|string|max:255',
-            'user_id'   => 'required|exists:users,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error de validación.',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
-        $appointment = Appointment::create($validator->validated());
+        $appointment = Appointment::create($request->validated());
 
         $whatsapp = $this->enviarNotificacionWA($appointment);
 
@@ -145,30 +125,9 @@ class AppointmentController extends Controller
         ]);
     }
 
-    public function update(Request $request, Appointment $appointment)
+    public function update(UpdateAppointmentRequest $request, Appointment $appointment)
     {
-        $validator = Validator::make($request->all(), [
-            'afi_code'  => 'required|integer',
-            'doctor_id' => 'required|exists:doctors,id',
-            'date'      => 'required|date',
-            'hour'      => 'required|string|max:10',
-            'address'   => 'required|string|max:255',
-            'city_id'   => 'required|exists:cities,id',
-            'phone'     => 'nullable|string|max:255',
-            'value'     => 'required|numeric|min:10000',
-            'type'      => 'required|in:1,2',
-            'name'      => 'required|string|max:255',
-            'user_id'   => 'required|exists:users,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error de validación.',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
-        $appointment->update($validator->validated());
+        $appointment->update($request->validated());
 
         $whatsapp = $this->enviarNotificacionWA($appointment);
 
