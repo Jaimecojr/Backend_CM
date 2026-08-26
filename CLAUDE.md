@@ -362,6 +362,16 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
 - `index()`: paginado, búsqueda por `name`/`email` (LIKE), carga `city:id,name`, orden `id desc`.
 - `destroy($id)`: hard delete físico. Sin soft-delete ni campo de estado.
 
+## Testing
+
+- **Convención de ubicación:** `tests/Unit/` (lógica pura, sin framework) y `tests/Feature/`
+  (HTTP, DB, integración) — la convención por defecto de Laravel, que ya es "carpeta espejo" según
+  el estándar de `dev-standards`. No mezclar con colocación (`*.test.php` junto al código).
+- **Cobertura:** `composer test:coverage` genera el reporte. Objetivo 85%+ de líneas/branches en
+  `app/`, sin bloquear commits mientras la cobertura de los módulos nuevos sube gradualmente.
+- **En Windows:** correr `XDEBUG_MODE=off php artisan test` — con Xdebug activo, un test que fuerza
+  una excepción de red dentro de `Http::fake()` produce un segfault.
+
 ## Reglas Generales
 1. **Idioma:** Los comentarios del código, nombres de variables descriptivas, strings de respuesta JSON y mensajes de validación deben estar en **español**.
 2. **Validación:** Validar siempre el input del Request antes de procesarlo o insertarlo en la base de datos.
