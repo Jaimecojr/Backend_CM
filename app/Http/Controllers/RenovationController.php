@@ -41,7 +41,9 @@ class RenovationController extends Controller
 
         $renovation = Renovation::create($request->all());
 
-        // Si el afiliado estaba inactivo por vencimiento, se reactiva
+        // Reactiva el afiliado solo si estaba inactivo por vencimiento (stade=2).
+        // Es un respaldo de backend: el frontend también envía stade=1 al renovar,
+        // pero esto cubre llamadas directas al endpoint de renovaciones.
         Affiliate::where('id', $request->affiliate_id)
             ->where('stade', 2)
             ->update(['stade' => 1]);

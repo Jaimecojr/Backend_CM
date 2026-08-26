@@ -120,6 +120,9 @@ class AffiliateController extends Controller
             ], 404);
         }
 
+        // Solo el super admin puede cambiar `stade` manualmente — el flujo normal
+        // es que el cron lo inactive al vencer y la renovación lo reactive. Ver
+        // regla de negocio en CLAUDE.md ("Regla de acceso para cambio manual de stade").
         if ($request->has('stade') && !$request->user()->esSuperAdmin()) {
             return response()->json([
                 'message' => 'No tiene permisos para cambiar el estado del afiliado.',

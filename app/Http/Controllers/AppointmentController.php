@@ -61,7 +61,9 @@ class AppointmentController extends Controller
 
         $paginated = $query->paginate($perPage);
 
-        // Normalizar owner: devuelve el afiliado o beneficiario según type
+        // `owner` es un campo calculado, nunca persistido: `affiliate` si type=1,
+        // `beneficiary` si type=2. Se recalcula en cada index()/show() porque el
+        // significado de `afi_code` cambia según `type` (ver CLAUDE.md).
         $items = collect($paginated->items())->map(function ($appt) {
             $arr          = $appt->toArray();
             $arr['owner'] = $appt->type === 1 ? $appt->affiliate : $appt->beneficiary;
