@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Renovation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,7 +10,7 @@ class RenovationRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_put_sobre_renovation_no_registrada_retorna_404(): void
+    public function test_put_sobre_renovation_no_registrada_retorna_405(): void
     {
         $admin = User::factory()->create();
 
@@ -20,7 +19,7 @@ class RenovationRoutesTest extends TestCase
         $response->assertStatus(405);
     }
 
-    public function test_delete_sobre_renovation_no_registrada_retorna_404(): void
+    public function test_delete_sobre_renovation_no_registrada_retorna_405(): void
     {
         $admin = User::factory()->create();
 
