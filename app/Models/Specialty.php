@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,8 +16,8 @@ class Specialty extends Model
         'state',
     ];
 
-    // Relaciones
-    // Relación: una especialidad tiene muchos doctores
+    // Relationships
+    // Relationship: a specialty has many doctors
     public function doctors()
     {
         return $this->hasMany(Doctor::class);

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Affiliate;
@@ -12,7 +14,7 @@ class DashboardController extends Controller
 {
     public function stats()
     {
-        if (!auth()->user()->esSuperAdmin()) {
+        if (!auth()->user()->isSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
@@ -21,7 +23,7 @@ class DashboardController extends Controller
 
         $active           = Affiliate::where('stade', 1)->count();
         $inactive         = Affiliate::where('stade', 2)->count();
-        $inactiveByExpiry = Affiliate::inactivosPorVencimiento()->count();
+        $inactiveByExpiry = Affiliate::inactiveByExpiry()->count();
         $thisMonth = Appointment::whereBetween('date', [$inicioMes, $finMes])->count();
 
         return response()->json([
@@ -56,7 +58,7 @@ class DashboardController extends Controller
             ->whereYear('payment_date', $year)
             ->groupBy('mes');
 
-        if (!$user->esSuperAdmin()) {
+        if (!$user->isSuperAdmin()) {
             $apptQuery->where('user_id', $user->id);
             $affilQuery->where('user_id', $user->id);
         }
@@ -76,7 +78,7 @@ class DashboardController extends Controller
             'affiliates_by_month'   => $affiliatesByMonth,
         ];
 
-        if ($user->esSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
             $franchises   = User::where('type', 2)->where('state', 1)->get(['id', 'name']);
             $franchiseIds = $franchises->pluck('id');
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Counselor;
@@ -148,7 +150,7 @@ class CounselorController extends Controller
 
             'type_contra'    => 'nullable|in:' . implode(',', $this->typeContraValues()),
 
-            // nullable + unique: solo valida unique si envían un valor
+            // nullable + unique: only validates uniqueness if a value is sent
             'email'          => 'nullable|email|max:255|unique:counselors,email,' . $id,
             'password'       => 'nullable|string|min:6',
 
@@ -177,9 +179,9 @@ class CounselorController extends Controller
 
         if ($request->filled('type_contra')) $counselor->type_contra = $request->type_contra;
 
-        // OJO: si quieres permitir borrar email (ponerlo null), debes manejarlo con has()
+        // NOTE: to allow clearing the email (setting it to null), it must be handled with has()
         if ($request->has('email')) {
-            $counselor->email = $request->email; // puede ser null
+            $counselor->email = $request->email; // can be null
         }
 
         if ($request->filled('password')) {
@@ -226,7 +228,7 @@ class CounselorController extends Controller
     public function checkIdCard(Request $request)
     {
         $idCard = preg_replace('/\D/', '', (string) $request->query('id_card', ''));
-        $ignoreId = $request->query('ignore_id'); // opcional (para editar)
+        $ignoreId = $request->query('ignore_id'); // optional (for editing)
 
         if ($idCard === '') {
             return response()->json([

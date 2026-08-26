@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Specialty;
@@ -22,7 +24,7 @@ class SpecialtyController extends Controller
     }
 
     /**
-     * Listado público para el sitio web — solo especialidades activas.
+     * Public listing for the website — only active specialties.
      */
     public function publicIndex()
     {

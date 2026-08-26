@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,32 +25,47 @@ class Appointment extends Model
         'user_id',
     ];
 
-    //Relaciones
-    //La cita pertenece a un doctor
+    /**
+     * Cast explicitly to int: without this, PDO can return numeric columns
+     * as strings depending on driver/config, which throws a TypeError under
+     * declare(strict_types=1) at any strict int|float call site (e.g.
+     * number_format() in AppointmentController) and breaks the `type === 1`
+     * comparisons used to resolve `owner`.
+     */
+    protected function casts(): array
+    {
+        return [
+            'value' => 'integer',
+            'type'  => 'integer',
+        ];
+    }
+
+    // Relationships
+    // The appointment belongs to a doctor
     public function doctor()
     {
         return $this->belongsTo(Doctor::class);
     }
 
-    // La cita pertenece a una ciudad
+    // The appointment belongs to a city
     public function city()
     {
         return $this->belongsTo(City::class);
     }
 
-    // La cita pertenece a una franquicia / usuario
+    // The appointment belongs to a franchise / user
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // afi_code apunta al afiliado titular (type = 1)
+    // afi_code points to the primary affiliate (type = 1)
     public function affiliate()
     {
         return $this->belongsTo(Affiliate::class, 'afi_code');
     }
 
-    // afi_code apunta al beneficiario (type = 2)
+    // afi_code points to the beneficiary (type = 2)
     public function beneficiary()
     {
         return $this->belongsTo(Beneficiary::class, 'afi_code');

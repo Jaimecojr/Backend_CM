@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -42,68 +44,67 @@ class Affiliate extends Model
         'user_id',
     ];
 
-    // Relaciones
-    // El afiliado pertenece a un vendedor
+    // Relationships
+    // The affiliate belongs to a counselor (sales advisor)
     public function counselor()
     {
         return $this->belongsTo(Counselor::class);
     }
 
-    // El afiliado pertenece a una ciudad
+    // The affiliate belongs to a city
     public function city()
     {
         return $this->belongsTo(City::class);
     }
 
-    // El afiliado tiene un convenio
+    // The affiliate has an agreement
     public function agreement()
     {
         return $this->belongsTo(Agreement::class);
     }
 
-    // El afiliado tiene una franquicia / usuario
+    // The affiliate belongs to a franchise / user
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Relación: un Afiliado tiene muchos beneficiarios
+    // Relationship: an affiliate has many beneficiaries
     public function beneficiaries()
     {
         return $this->hasMany(Beneficiary::class);
     }
 
-    // Relación: un Afiliado tiene muchos renovaciones
+    // Relationship: an affiliate has many renovations
     public function renovations()
     {
         return $this->hasMany(Renovation::class);
     }
 
-    // Relación: un Afiliado tiene muchas notas/observaciones
+    // Relationship: an affiliate has many notes/observations
     public function notes()
     {
         return $this->hasMany(AffiliateNote::class);
     }
 
-    // Scopes de vigencia
-    // Activos cuya vigencia ya pasó — candidatos a inactivar (usado por el
-    // comando affiliates:update-expired).
-    public function scopeActivosVencidos($query)
+    // Validity-period scopes
+    // Active whose validity already expired — candidates to deactivate
+    // (used by the affiliates:update-expired command).
+    public function scopeActiveExpired($query)
     {
         return $query->where('stade', 1)->where('validity_end', '<', now()->toDateString());
     }
 
-    // Activos que vencen exactamente hoy — alerta del dashboard para que
-    // los asesores gestionen la renovación antes de que se inactiven.
-    public function scopeActivosVencenHoy($query)
+    // Active and expiring exactly today — dashboard alert so counselors
+    // can handle the renewal before they get deactivated.
+    public function scopeActiveExpiringToday($query)
     {
         return $query->where('stade', 1)->where('validity_end', now()->toDateString());
     }
 
-    // Ya inactivos y además con vigencia vencida — métrica de
-    // dashboard/stats (distingue inactivos "por vencimiento" de inactivos
-    // por baja manual).
-    public function scopeInactivosPorVencimiento($query)
+    // Already inactive and with an expired validity — dashboard/stats
+    // metric (distinguishes "inactive by expiry" from a manual deactivation).
+    public function scopeInactiveByExpiry($query)
     {
         return $query->where('stade', 2)->where('validity_end', '<', now()->toDateString());
     }

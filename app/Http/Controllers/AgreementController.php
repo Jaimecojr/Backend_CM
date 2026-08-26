@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Agreement;
@@ -35,7 +37,7 @@ class AgreementController extends Controller
      */
     public function store(Request $request)
     {
-        if (!$request->user()->esSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
@@ -92,7 +94,7 @@ class AgreementController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!$request->user()->esSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 

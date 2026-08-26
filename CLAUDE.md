@@ -129,6 +129,27 @@ Al definir las reglas del `Validator::make()` en cualquier controlador, aplica s
 | `phone` (teléfono) | `'nullable\|string\|max:255'` — libre (la restricción de formato es solo frontend) |
 | `value_agreement` / `amount` (valor) | `'required\|numeric\|min:10000'` o `'nullable\|numeric\|min:10000'` según si es obligatorio |
 
+### Código HTTP en fallos de validación: split 400 / 422 entre módulos
+
+Tras la introducción de Form Requests (retrofit de estándares), el código HTTP devuelto cuando
+falla la validación quedó dividido de forma permanente entre dos grupos — **no es un descuido, es
+una decisión deliberada**:
+
+- **400 (convención del proyecto):** `Affiliate`, `User`, `Doctor`, `Counselor`, `Specialty`,
+  `Renovation`. La mayoría siguen usando `Validator::make()` manual con retorno explícito `400`;
+  `Affiliate` y `User` ya migraron a Form Requests (`StoreAffiliateRequest`, `UpdateAffiliateRequest`,
+  `StoreUserRequest`, `UpdateUserRequest`) pero sobrescriben `failedValidation()` para seguir
+  devolviendo `400` y no romper el contrato existente.
+- **422 (comportamiento nativo de Laravel):** `Appointment`, `Setting`, `AffiliateNote`. Ya
+  devolvían `422` antes de este retrofit (comportamiento por defecto de `$request->validate()` /
+  `ValidationException` de Laravel) y tenían tráfico real desde `frontend-cm`. Cambiarlos a `400`
+  para "unificar" arriesgaba romper el manejo de errores ya en producción de esos endpoints por un
+  beneficio puramente cosmético — se decidió no tocarlos.
+
+Si se crea un controlador nuevo, seguir la convención de `400` (`Validator::make()` manual o Form
+Request con `failedValidation()` sobrescrito) salvo que exista una razón de compatibilidad
+equivalente a la de estos tres módulos.
+
 ## Lógica de Vencimiento de Afiliados (Scheduler)
 
 El sistema automatiza el cambio de estado de afiliados vencidos mediante el scheduler de Laravel.
@@ -362,7 +383,21 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
 - `index()`: paginado, búsqueda por `name`/`email` (LIKE), carga `city:id,name`, orden `id desc`.
 - `destroy($id)`: hard delete físico. Sin soft-delete ni campo de estado.
 
+## Testing
+
+- **Convención de ubicación:** `tests/Unit/` (lógica pura, sin framework) y `tests/Feature/`
+  (HTTP, DB, integración) — la convención por defecto de Laravel, que ya es "carpeta espejo" según
+  el estándar de `dev-standards`. No mezclar con colocación (`*.test.php` junto al código).
+- **Cobertura:** `composer test:coverage` genera el reporte. Objetivo 85%+ de líneas/branches en
+  `app/`, sin bloquear commits mientras la cobertura de los módulos nuevos sube gradualmente. Es una
+  meta aspiracional, no medida todavía: este entorno local nunca tuvo un driver de cobertura
+  disponible (PCOV o Xdebug con `coverage`) durante todo el desarrollo de la rama, así que el número
+  real de cobertura sigue sin conocerse — instalar PCOV o habilitar Xdebug con coverage es
+  prerrequisito antes de poder verificar este objetivo.
+- **En Windows:** correr `XDEBUG_MODE=off php artisan test` — con Xdebug activo, un test que fuerza
+  una excepción de red dentro de `Http::fake()` produce un segfault.
+
 ## Reglas Generales
-1. **Idioma:** Los comentarios del código, nombres de variables descriptivas, strings de respuesta JSON y mensajes de validación deben estar en **español**.
+1. **Idioma:** El código en sí —comentarios, PHPDoc, nombres de métodos, propiedades y variables— debe estar en **inglés**, siguiendo la convención estándar de desarrollo (esto revierte la regla anterior de este documento). Los strings de respuesta JSON y mensajes de validación que ve el usuario final del panel siguen en **español** — son producto, no código, y el panel es para asesores/franquicias colombianas. Los comentarios de código no deben referenciar `CLAUDE.md` ni otros documentos internos por nombre; deben ser autocontenidos y explicar el WHY directamente.
 2. **Validación:** Validar siempre el input del Request antes de procesarlo o insertarlo en la base de datos.
 3. **Manejo de Errores:** Retornar códigos HTTP adecuados (200 OK, 422 Unprocessable Entity, 500 Server Error) con un formato JSON consistente.

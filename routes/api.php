@@ -79,7 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('beneficiaries', BeneficiaryController::class);
 
     // Renovaciones
-    Route::apiResource('renovations', RenovationController::class);
+    Route::apiResource('renovations', RenovationController::class)->only(['index', 'store', 'show']);
 
     // Especialidades
     Route::apiResource('specialties', SpecialtyController::class);

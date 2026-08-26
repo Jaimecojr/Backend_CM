@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,49 +16,49 @@ class City extends Model
         'name',
     ];
 
-    // Relación: la ciudad pertenece a un departamento
+    // Relationship: the city belongs to a department
     public function department()
     {
         return $this->belongsTo(Department::class);
     }
 
-    // Relación: un ciudad tiene muchos admins
+    // Relationship: a city has many admins
     public function admins()
     {
         return $this->hasMany(Admin::class);
     }
 
-    // Relación: un ciudad tiene muchos usuarios
+    // Relationship: a city has many users
     public function users()
     {
         return $this->hasMany(User::class);
     }
 
-    // Relación: un ciudad tiene muchos vendedores
+    // Relationship: a city has many counselors
     public function counselors()
     {
         return $this->hasMany(Counselor::class);
     }
 
-    // Relación: un ciudad tiene muchos afiliados
+    // Relationship: a city has many affiliates
     public function affiliates()
     {
         return $this->hasMany(Affiliate::class);
     }
 
-    // Relación: un ciudad tiene muchos formularios de Afiliacion
+    // Relationship: a city has many membership forms
     public function membershipForms()
     {
         return $this->hasMany(MembershipForm::class);
     }
 
-    // Relación: un ciudad tiene muchos formularios de contacto
+    // Relationship: a city has many contact messages
     public function contacts()
     {
         return $this->hasMany(Contact::class);
     }
 
-    // Relación: un ciudad tiene muchas citas
+    // Relationship: a city has many appointments
     public function appointments()
     {
         return $this->hasMany(Appointment::class);

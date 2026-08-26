@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,13 +18,13 @@ class Agreement extends Model
         'city_id',
     ];
 
-    // Relación con ciudad
+    // Relationship with city
     public function city()
     {
         return $this->belongsTo(City::class);
     }
 
-    // Relación: un convenio tiene muchos afiliados
+    // Relationship: an agreement has many affiliates
     public function affiliates()
     {
         return $this->hasMany(Affiliate::class);

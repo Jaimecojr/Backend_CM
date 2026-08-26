@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -21,11 +23,11 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        // "auth_hint" NO es la fuente de verdad de autenticación (eso lo sigue
-        // validando /user vía auth:sanctum) — solo le permite al middleware de
-        // Next.js (proxy.ts) redirigir al login en el edge sin round-trip al
-        // backend cuando claramente no hay sesión. A diferencia de XSRF-TOKEN,
-        // esta cookie solo existe si hubo un login exitoso.
+        // "auth_hint" is NOT the source of truth for authentication (that's still
+        // validated by /user via auth:sanctum) — it only lets the Next.js
+        // middleware (proxy.ts) redirect to login at the edge without a round-trip
+        // to the backend when there's clearly no session. Unlike XSRF-TOKEN,
+        // this cookie only exists if there was a successful login.
         return response()->json(['message' => 'Autenticado'])->cookie(
             'auth_hint',
             '1',
@@ -33,7 +35,7 @@ class AuthController extends Controller
             config('session.path'),
             config('session.domain'),
             config('session.secure'),
-            false, // httpOnly=false: no guarda nada sensible, solo es una bandera de presencia
+            false, // httpOnly=false: doesn't store anything sensitive, it's just a presence flag
             false,
             config('session.same_site')
         );

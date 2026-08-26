@@ -11,7 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Sin Setting configurado: enviarNotificacionWA() falla temprano por
+ * Sin Setting configurado: sendWhatsAppNotification() falla temprano por
  * configuración incompleta, sin necesidad de Http::fake() en los tests
  * que no verifican el envío de WhatsApp explícitamente.
  */
@@ -50,6 +50,10 @@ class AppointmentControllerTest extends TestCase
             'name' => 'Sin los demás campos',
         ]);
 
+        // This endpoint keeps 422 (original behavior, FormRequest's default
+        // with no override) because it has real traffic from frontend-cm —
+        // unlike Affiliate/User, it isn't aligned with the app's 400
+        // convention. See StoreAppointmentRequest for the rationale.
         $response->assertStatus(422);
     }
 

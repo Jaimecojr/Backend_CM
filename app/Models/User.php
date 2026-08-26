@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -64,32 +66,32 @@ class User extends Authenticatable
         return 'user';
     }
 
-    // Super admin: único rol con acceso a métricas globales, gestión de
-    // convenios/notas y sin restricción de "solo ver mis propios registros".
-    public function esSuperAdmin(): bool
+    // Super admin: the only role with access to global metrics, agreement/note
+    // management, and no "only see my own records" restriction.
+    public function isSuperAdmin(): bool
     {
         return $this->type === 1;
     }
 
-    // Relación con City
+    // Relationship with City
     public function city()
     {
         return $this->belongsTo(City::class);
     }
 
-    // Relación: un franquicia tiene muchos vendedores
+    // Relationship: a franchise has many counselors
     public function counselors()
     {
         return $this->hasMany(Counselor::class);
     }
 
-    // Relación: un franquicia / usuario tiene muchos afiliados
+    // Relationship: a franchise/user has many affiliates
     public function affiliates()
     {
         return $this->hasMany(Affiliate::class);
     }
 
-    // Relación: un franquicia / usuario tiene muchas citas
+    // Relationship: a franchise/user has many appointments
     public function appointments()
     {
         return $this->hasMany(Appointment::class);

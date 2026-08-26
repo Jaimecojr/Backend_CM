@@ -16,7 +16,7 @@ class AffiliateVigenciaScopesTest extends TestCase
         Affiliate::factory()->create(['stade' => 1, 'validity_end' => now()->addDay()->toDateString()]);
         Affiliate::factory()->create(['stade' => 2, 'validity_end' => now()->subDay()->toDateString()]);
 
-        $resultado = Affiliate::activosVencidos()->get();
+        $resultado = Affiliate::activeExpired()->get();
 
         $this->assertCount(1, $resultado);
         $this->assertSame($vencido->id, $resultado->first()->id);
@@ -27,7 +27,7 @@ class AffiliateVigenciaScopesTest extends TestCase
         $vencenHoy = Affiliate::factory()->create(['stade' => 1, 'validity_end' => now()->toDateString()]);
         Affiliate::factory()->create(['stade' => 1, 'validity_end' => now()->addDay()->toDateString()]);
 
-        $resultado = Affiliate::activosVencenHoy()->get();
+        $resultado = Affiliate::activeExpiringToday()->get();
 
         $this->assertCount(1, $resultado);
         $this->assertSame($vencenHoy->id, $resultado->first()->id);
@@ -39,7 +39,7 @@ class AffiliateVigenciaScopesTest extends TestCase
         Affiliate::factory()->create(['stade' => 2, 'validity_end' => now()->addDay()->toDateString()]);
         Affiliate::factory()->create(['stade' => 1, 'validity_end' => now()->subDay()->toDateString()]);
 
-        $resultado = Affiliate::inactivosPorVencimiento()->get();
+        $resultado = Affiliate::inactiveByExpiry()->get();
 
         $this->assertCount(1, $resultado);
         $this->assertSame($inactivoVencido->id, $resultado->first()->id);
