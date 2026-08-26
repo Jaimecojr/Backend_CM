@@ -47,7 +47,7 @@ tokens Sanctum explícitos).
 
 ---
 
-### Tarea 1: Bug activo — `AffiliateController::update()` no restringe `stade` a super admin
+### Task 1: Bug activo — `AffiliateController::update()` no restringe `stade` a super admin
 
 **Files:**
 - Modify: `app/Http/Controllers/AffiliateController.php` (método `update()`)
@@ -152,7 +152,7 @@ afectado).
 
 ---
 
-### Tarea 2: `RenovationController` — restringir rutas a las que sí están implementadas
+### Task 2: `RenovationController` — restringir rutas a las que sí están implementadas
 
 **Files:**
 - Modify: `routes/api.php`
@@ -230,7 +230,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 3: Configurar cobertura de tests + documentar convención en `CLAUDE.md`
+### Task 3: Configurar cobertura de tests + documentar convención en `CLAUDE.md`
 
 **Files:**
 - Modify: `phpunit.xml`
@@ -294,7 +294,7 @@ Expected: sin cambios de comportamiento, solo configuración/documentación.
 
 ---
 
-### Tarea 4: Tests Feature — `RenovationController`
+### Task 4: Tests Feature — `RenovationController`
 
 **Files:**
 - Test: `tests/Feature/RenovationControllerTest.php` (crear)
@@ -455,7 +455,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 5: Tests Feature — `UserController`
+### Task 5: Tests Feature — `UserController`
 
 **Files:**
 - Test: `tests/Feature/UserControllerCrudTest.php` (crear — nombre distinto de
@@ -610,7 +610,7 @@ Expected: todo en verde, incluyendo `UserMovilValidationTest`/`UserSuperAdminTes
 
 ---
 
-### Tarea 6: Tests Feature — `DoctorController`
+### Task 6: Tests Feature — `DoctorController`
 
 **Files:**
 - Test: `tests/Feature/DoctorControllerTest.php` (crear)
@@ -753,7 +753,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 7: Tests Feature — `CounselorController`
+### Task 7: Tests Feature — `CounselorController`
 
 **Files:**
 - Test: `tests/Feature/CounselorControllerTest.php` (crear)
@@ -886,7 +886,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 8: Tests Feature — `AgreementController` + `AffiliateNoteController`
+### Task 8: Tests Feature — `AgreementController` + `AffiliateNoteController`
 
 **Files:**
 - Test: `tests/Feature/AgreementControllerTest.php` (crear)
@@ -1093,7 +1093,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 9: Tests Feature — `MembershipFormController` (admin) + `SettingController`
+### Task 9: Tests Feature — `MembershipFormController` (admin) + `SettingController`
 
 **Files:**
 - Test: `tests/Feature/MembershipFormAdminControllerTest.php` (crear — nombre distinto de un
@@ -1277,7 +1277,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 10: Tests Feature — catálogos `SpecialtyController`, `CityController`, `DepartmentController`
+### Task 10: Tests Feature — catálogos `SpecialtyController`, `CityController`, `DepartmentController`
 
 **Files:**
 - Test: `tests/Feature/SpecialtyControllerTest.php` (crear)
@@ -1418,7 +1418,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 11: Verificación de cobertura tras las Tareas 4-10
+### Task 11: Verificación de cobertura tras las Tareas 4-10
 
 **Files:** ninguno — solo verificación.
 
@@ -1441,7 +1441,7 @@ Service).
 
 ---
 
-### Tarea 12: `declare(strict_types=1)` mecánico en todo `app/`
+### Task 12: `declare(strict_types=1)` mecánico en todo `app/`
 
 **Files:**
 - Modify: los ~62 archivos `.php` bajo `app/` (obtener la lista exacta y actual con el comando del
@@ -1494,7 +1494,7 @@ Expected: lista vacía.
 
 ---
 
-### Tarea 13: Extraer `BeneficiarySyncService` de `AffiliateController`
+### Task 13: Extraer `BeneficiarySyncService` de `AffiliateController`
 
 **Files:**
 - Create: `app/Services/BeneficiarySyncService.php`
@@ -1642,7 +1642,7 @@ Expected: todo en verde, incluyendo `AffiliateControllerTest::test_store_crea_be
 
 ---
 
-### Tarea 14: Form Request para `Affiliate` (preservando el código 400)
+### Task 14: Form Request para `Affiliate` (preservando el código 400)
 
 **Files:**
 - Create: `app/Http/Requests/StoreAffiliateRequest.php`
@@ -1743,7 +1743,7 @@ autorización de este mismo controlador.
 
 ---
 
-### Tarea 15: Form Requests para `Appointment` + `User`
+### Task 15: Form Requests para `Appointment` + `User`
 
 **Files:**
 - Create: `app/Http/Requests/StoreAppointmentRequest.php`, `UpdateAppointmentRequest.php`
@@ -1807,7 +1807,7 @@ Expected: todo en verde.
 
 ---
 
-### Tarea 16: Pasada de PHPDoc WHY en los puntos ya identificados
+### Task 16: Pasada de PHPDoc WHY en los puntos ya identificados
 
 **Files:**
 - Modify: `app/Http/Controllers/AffiliateController.php` (método `update()`, junto al fix de la Tarea 1)
@@ -1852,7 +1852,7 @@ Expected: sin cambios de comportamiento, todo en verde.
 
 ---
 
-### Tarea 17: Verificación final integrada
+### Task 17: Verificación final integrada
 
 **Files:** ninguno.
 
