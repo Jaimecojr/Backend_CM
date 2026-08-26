@@ -129,6 +129,27 @@ Al definir las reglas del `Validator::make()` en cualquier controlador, aplica s
 | `phone` (teléfono) | `'nullable\|string\|max:255'` — libre (la restricción de formato es solo frontend) |
 | `value_agreement` / `amount` (valor) | `'required\|numeric\|min:10000'` o `'nullable\|numeric\|min:10000'` según si es obligatorio |
 
+### Código HTTP en fallos de validación: split 400 / 422 entre módulos
+
+Tras la introducción de Form Requests (retrofit de estándares), el código HTTP devuelto cuando
+falla la validación quedó dividido de forma permanente entre dos grupos — **no es un descuido, es
+una decisión deliberada**:
+
+- **400 (convención del proyecto):** `Affiliate`, `User`, `Doctor`, `Counselor`, `Specialty`,
+  `Renovation`. La mayoría siguen usando `Validator::make()` manual con retorno explícito `400`;
+  `Affiliate` y `User` ya migraron a Form Requests (`StoreAffiliateRequest`, `UpdateAffiliateRequest`,
+  `StoreUserRequest`, `UpdateUserRequest`) pero sobrescriben `failedValidation()` para seguir
+  devolviendo `400` y no romper el contrato existente.
+- **422 (comportamiento nativo de Laravel):** `Appointment`, `Setting`, `AffiliateNote`. Ya
+  devolvían `422` antes de este retrofit (comportamiento por defecto de `$request->validate()` /
+  `ValidationException` de Laravel) y tenían tráfico real desde `frontend-cm`. Cambiarlos a `400`
+  para "unificar" arriesgaba romper el manejo de errores ya en producción de esos endpoints por un
+  beneficio puramente cosmético — se decidió no tocarlos.
+
+Si se crea un controlador nuevo, seguir la convención de `400` (`Validator::make()` manual o Form
+Request con `failedValidation()` sobrescrito) salvo que exista una razón de compatibilidad
+equivalente a la de estos tres módulos.
+
 ## Lógica de Vencimiento de Afiliados (Scheduler)
 
 El sistema automatiza el cambio de estado de afiliados vencidos mediante el scheduler de Laravel.
@@ -368,7 +389,11 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
   (HTTP, DB, integración) — la convención por defecto de Laravel, que ya es "carpeta espejo" según
   el estándar de `dev-standards`. No mezclar con colocación (`*.test.php` junto al código).
 - **Cobertura:** `composer test:coverage` genera el reporte. Objetivo 85%+ de líneas/branches en
-  `app/`, sin bloquear commits mientras la cobertura de los módulos nuevos sube gradualmente.
+  `app/`, sin bloquear commits mientras la cobertura de los módulos nuevos sube gradualmente. Es una
+  meta aspiracional, no medida todavía: este entorno local nunca tuvo un driver de cobertura
+  disponible (PCOV o Xdebug con `coverage`) durante todo el desarrollo de la rama, así que el número
+  real de cobertura sigue sin conocerse — instalar PCOV o habilitar Xdebug con coverage es
+  prerrequisito antes de poder verificar este objetivo.
 - **En Windows:** correr `XDEBUG_MODE=off php artisan test` — con Xdebug activo, un test que fuerza
   una excepción de red dentro de `Http::fake()` produce un segfault.
 

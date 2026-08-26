@@ -270,6 +270,13 @@ no en CI.
 **Orden recomendado:** aplicar archivo por archivo, no en un solo commit masivo, corriendo
 `php artisan test` después de cada archivo modificado.
 
+**Estado real al cierre de la rama (2026-08-25):** solo se aplicó la línea
+`declare(strict_types=1);` en los archivos de `app/`. La parte de "completar tipos de
+parámetro/retorno donde falten" descrita arriba **no se implementó** — son ~204 métodos entre
+controladores, requests y servicios, y hacerlo con el mismo cuidado archivo por archivo (con
+`php artisan test` después de cada uno) excede el alcance de esta rama. Queda pendiente como
+trabajo futuro; ver también Hallazgo 5.2 abajo.
+
 ---
 
 ## Pilar 4 — Dependencias (`references/dependency-management.md`)
@@ -309,6 +316,10 @@ del 422 por defecto. Esto se documenta como restricción explícita para el plan
 
 Cubierto junto con 3.3 (misma pasada mecánica: `strict_types` + tipos de parámetro/retorno se
 hacen juntos, archivo por archivo).
+
+**Estado real al cierre de la rama (2026-08-25):** NO implementado, igual que 3.3 arriba. Solo se
+agregó `declare(strict_types=1)`; los métodos siguen sin tipos de parámetro/retorno explícitos
+(ej. `show($id)` en vez de `show(int $id): JsonResponse`). Sigue abierto para una pasada futura.
 
 ---
 

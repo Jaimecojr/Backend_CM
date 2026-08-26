@@ -8,12 +8,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Sin override de failedValidation(): a diferencia de Affiliate/User, este
- * endpoint ya tenía tráfico real desde frontend-cm antes de la Tarea 15, y su
- * comportamiento original (Validator::make() manual) devolvía 422 en fallos
- * de validación — no 400 como el resto de la app. Se preserva ese contrato
- * de API dejando que FormRequest use el comportamiento por defecto de
- * Laravel (ValidationException -> 422), en vez de alinearlo con la
- * convención de 400 usada en los demás módulos. Ver task-15-report.md.
+ * endpoint ya devolvía 422 nativamente (comportamiento por defecto de
+ * Laravel) antes de que este retrofit introdujera Form Requests, y ya tenía
+ * tráfico real desde frontend-cm consumiéndolo. Alinearlo con la convención
+ * de 400 usada en el resto de la app arriesgaba romper el manejo de errores
+ * ya en producción de un endpoint en vivo por un beneficio puramente
+ * cosmético, así que se dejó tal cual. Ver CLAUDE.md, sección "Código HTTP
+ * en fallos de validación: split 400 / 422 entre módulos".
  */
 class StoreAppointmentRequest extends FormRequest
 {
@@ -32,7 +33,7 @@ class StoreAppointmentRequest extends FormRequest
             'address'   => 'required|string|max:255',
             'city_id'   => 'required|exists:cities,id',
             'phone'     => 'nullable|string|max:255',
-            'value'     => 'required|numeric|min:10000',
+            'value'     => 'required|integer|min:10000',
             'type'      => 'required|in:1,2',
             'name'      => 'required|string|max:255',
             'user_id'   => 'required|exists:users,id',

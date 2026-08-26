@@ -29,7 +29,7 @@ class UpdateAppointmentRequest extends FormRequest
             'address'   => 'required|string|max:255',
             'city_id'   => 'required|exists:cities,id',
             'phone'     => 'nullable|string|max:255',
-            'value'     => 'required|numeric|min:10000',
+            'value'     => 'required|integer|min:10000',
             'type'      => 'required|in:1,2',
             'name'      => 'required|string|max:255',
             'user_id'   => 'required|exists:users,id',

@@ -54,7 +54,8 @@ class AppointmentControllerTest extends TestCase
         // FormRequest sin override) porque tiene tráfico real desde
         // frontend-cm — a diferencia de Affiliate/User, no se alinea con la
         // convención de 400 del resto de la app. Ver StoreAppointmentRequest
-        // y task-15-report.md.
+        // y CLAUDE.md ("Código HTTP en fallos de validación: split 400 / 422
+        // entre módulos").
         $response->assertStatus(422);
     }
 
