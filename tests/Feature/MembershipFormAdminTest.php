@@ -102,4 +102,15 @@ class MembershipFormAdminTest extends TestCase
     {
         $this->actingAs($this->admin())->patchJson('/api/membership-forms/9999/convert')->assertStatus(404);
     }
+
+    public function test_mark_converted_saca_la_solicitud_del_listado(): void
+    {
+        $admin = $this->admin();
+        $form  = MembershipForm::factory()->create(['state' => 0]);
+
+        $this->actingAs($admin)->patchJson("/api/membership-forms/{$form->id}/convert")->assertStatus(200);
+
+        $index = $this->actingAs($admin)->getJson('/api/membership-forms');
+        $index->assertStatus(200)->assertJsonPath('meta.total', 0);
+    }
 }
