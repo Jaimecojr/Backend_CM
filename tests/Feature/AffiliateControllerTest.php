@@ -118,6 +118,15 @@ class AffiliateControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
+    public function test_store_retorna_400_no_422_en_validacion_fallida(): void
+    {
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/affiliates', []);
+
+        $response->assertStatus(400);
+    }
+
     public function test_index_filtra_por_stade(): void
     {
         $admin = User::factory()->create(['type' => 1]);

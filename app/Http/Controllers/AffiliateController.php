@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAffiliateRequest;
+use App\Http\Requests\UpdateAffiliateRequest;
 use App\Models\Affiliate;
 use App\Services\BeneficiarySyncService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 
@@ -69,51 +72,9 @@ class AffiliateController extends Controller
     /**
      * Crear un nuevo afiliado
      */
-    public function store(Request $request)
+    public function store(StoreAffiliateRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'counselor_id'       => 'required|exists:counselors,id',
-            'contract_code'      => 'nullable|string|max:100',
-            'name'               => 'required|string|max:100',
-            'lastname'           => 'required|string|max:100',
-            'bithdate'           => 'nullable|date',
-            'id_card'            => 'required|string|max:50',
-            'phone'              => 'nullable|string|max:50',
-            'movil'              => 'required|digits:10',
-            'address'            => 'nullable|string|max:150',
-            'city_id'            => 'required|exists:cities,id',
-            'email'              => 'nullable|email|max:100',
-            'validity'           => 'required|date',
-            'agreement_id'       => 'required|exists:agreements,id',
-            'company'            => 'nullable|string|max:150',
-            'photo'              => 'nullable|string',
-            'photo_rename'       => 'nullable|string',
-            'validity_end'       => 'required|date',
-            'stade'              => 'nullable|integer',
-            'carnet'             => 'required|in:si,no',
-            'state'              => 'required|integer',
-            'user_id'            => 'required|exists:users,id',
-            'payment_date'       => 'required|date',
-            'value'              => 'required|integer',
-            'balance'            => 'required|integer',
-            'commission'         => 'required|integer',
-            'payment_commission' => 'required|in:si,no',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error en la validación',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
-        $affiliate = Affiliate::create($request->only([
-            'counselor_id', 'contract_code', 'name', 'lastname', 'bithdate',
-            'id_card', 'phone', 'movil', 'address', 'city_id', 'email',
-            'validity', 'agreement_id', 'company', 'photo', 'photo_rename',
-            'validity_end', 'payment_date', 'stade', 'carnet', 'state', 'user_id',
-            'value', 'balance', 'commission', 'payment_commission',
-        ]));
+        $affiliate = Affiliate::create($request->validated());
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             $this->beneficiarySync->sync($affiliate, $request->beneficiaries);
@@ -149,7 +110,7 @@ class AffiliateController extends Controller
     /**
      * Actualizar un afiliado existente
      */
-    public function update(Request $request, $id)
+    public function update(UpdateAffiliateRequest $request, $id)
     {
         $affiliate = Affiliate::find($id);
 
@@ -165,49 +126,9 @@ class AffiliateController extends Controller
             ], 403);
         }
 
-        $validator = Validator::make($request->all(), [
-            'counselor_id'       => 'nullable|exists:counselors,id',
-            'contract_code'      => 'nullable|string|max:100',
-            'name'               => 'sometimes|required|string|max:100',
-            'lastname'           => 'sometimes|required|string|max:100',
-            'bithdate'           => 'nullable|date',
-            'id_card'            => 'sometimes|required|string|max:50',
-            'phone'              => 'nullable|string|max:50',
-            'movil'              => 'sometimes|required|digits:10',
-            'address'            => 'nullable|string|max:150',
-            'city_id'            => 'nullable|exists:cities,id',
-            'email'              => 'nullable|email|max:100',
-            'validity'           => 'nullable|date',
-            'agreement_id'       => 'nullable|exists:agreements,id',
-            'company'            => 'nullable|string|max:150',
-            'photo'              => 'nullable|string',
-            'photo_rename'       => 'nullable|string',
-            'validity_end'       => 'sometimes|required|date',
-            'stade'              => 'nullable|integer',
-            'carnet'             => 'nullable|in:si,no',
-            'state'              => 'nullable|integer',
-            'user_id'            => 'nullable|exists:users,id',
-            'payment_date'       => 'nullable|date',
-            'value'              => 'nullable|integer',
-            'balance'            => 'nullable|integer',
-            'commission'         => 'nullable|integer',
-            'payment_commission' => 'nullable|in:si,no',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error en la validación',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
-        $affiliate->update($request->only([
-            'counselor_id', 'contract_code', 'name', 'lastname', 'bithdate',
-            'id_card', 'phone', 'movil', 'address', 'city_id', 'email',
-            'agreement_id', 'company', 'photo', 'photo_rename',
-            'validity_end', 'payment_date', 'stade', 'carnet', 'state', 'user_id',
-            'value', 'balance', 'commission', 'payment_commission',
-        ]));
+        // `validity` es inmutable (ver CLAUDE.md): se valida su formato si se
+        // envía, pero nunca se persiste en una actualización.
+        $affiliate->update(Arr::except($request->validated(), ['validity']));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             $this->beneficiarySync->sync($affiliate, $request->beneficiaries);
