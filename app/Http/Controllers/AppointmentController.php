@@ -31,12 +31,12 @@ class AppointmentController extends Controller
             'beneficiary:id,name',
         ])->select('appointments.*');
 
-        // Solo el super admin (type = 1) ve todas las citas; los demás solo las suyas
-        if (!auth()->user()->esSuperAdmin()) {
+        // Only the super admin (type = 1) sees every appointment; everyone else sees only their own
+        if (!auth()->user()->isSuperAdmin()) {
             $query->where('appointments.user_id', auth()->id());
         }
 
-        // Filtro por fecha exacta o por período (pendientes / pasadas)
+        // Filter by exact date or by period (pending / past)
         if ($date) {
             $query->whereDate('appointments.date', $date);
             $query->orderBy('appointments.date', 'asc')->orderBy('appointments.hour', 'asc');
@@ -61,9 +61,9 @@ class AppointmentController extends Controller
 
         $paginated = $query->paginate($perPage);
 
-        // `owner` es un campo calculado, nunca persistido: `affiliate` si type=1,
-        // `beneficiary` si type=2. Se recalcula en cada index()/show() porque el
-        // significado de `afi_code` cambia según `type` (ver CLAUDE.md).
+        // `owner` is a calculated field, never persisted: `affiliate` if type=1,
+        // `beneficiary` if type=2. It's recalculated on every index()/show() call
+        // because what `afi_code` points to depends on `type`.
         $items = collect($paginated->items())->map(function ($appt) {
             $arr          = $appt->toArray();
             $arr['owner'] = $appt->type === 1 ? $appt->affiliate : $appt->beneficiary;
@@ -95,7 +95,7 @@ class AppointmentController extends Controller
     {
         $appointment = Appointment::create($request->validated());
 
-        $whatsapp = $this->enviarNotificacionWA($appointment);
+        $whatsapp = $this->sendWhatsAppNotification($appointment);
 
         return response()->json([
             'message'   => 'Cita creada correctamente.',
@@ -131,7 +131,7 @@ class AppointmentController extends Controller
     {
         $appointment->update($request->validated());
 
-        $whatsapp = $this->enviarNotificacionWA($appointment);
+        $whatsapp = $this->sendWhatsAppNotification($appointment);
 
         return response()->json([
             'message'  => 'Cita actualizada correctamente.',
@@ -151,14 +151,14 @@ class AppointmentController extends Controller
 
     public function today()
     {
-        $hoy = Carbon::today()->toDateString();
+        $today = Carbon::today()->toDateString();
 
         $query = Appointment::select(['id', 'name', 'hour', 'doctor_id'])
             ->with(['doctor:id,name,lastname'])
-            ->where('date', $hoy)
+            ->where('date', $today)
             ->orderBy('hour');
 
-        if (!auth()->user()->esSuperAdmin()) {
+        if (!auth()->user()->isSuperAdmin()) {
             $query->where('user_id', auth()->id());
         }
 
@@ -167,56 +167,56 @@ class AppointmentController extends Controller
         return response()->json([
             'message' => 'Citas del día',
             'data'    => $appointments,
-            'date'    => $hoy,
+            'date'    => $today,
         ], 200);
     }
 
-    private function enviarNotificacionWA(Appointment $appointment): array
+    private function sendWhatsAppNotification(Appointment $appointment): array
     {
-        // Validar teléfono
+        // Validate the phone number
         $phone = preg_replace('/\D/', '', (string) $appointment->phone);
         if (strlen($phone) !== 10) {
             return ['enviado' => false, 'detalle' => 'El teléfono de la cita no es válido'];
         }
 
-        // Validar configuración de WhatsApp
-        $settings = $this->whatsapp->configuracionParaPlantilla('wa_appointment_template_name');
+        // Validate WhatsApp configuration
+        $settings = $this->whatsapp->configurationForTemplate('wa_appointment_template_name');
         if (!$settings) {
             return ['enviado' => false, 'detalle' => 'Configuración de WhatsApp incompleta'];
         }
 
-        // Cargar relaciones para la plantilla
+        // Load relations needed for the template
         $appointment->loadMissing('doctor.specialty');
 
-        $doctor         = $appointment->doctor;
-        $especialidad   = $doctor?->specialty?->name ?? 'No especificada';
-        $nombreDoctor   = $doctor ? trim($doctor->name . ' ' . $doctor->lastname) : 'No asignado';
-        $fecha          = \Carbon\Carbon::parse($appointment->date)->format('d/m/Y');
-        $valor          = '$ ' . number_format($appointment->value, 0, ',', '.');
+        $doctor       = $appointment->doctor;
+        $specialty    = $doctor?->specialty?->name ?? 'No especificada';
+        $doctorName   = $doctor ? trim($doctor->name . ' ' . $doctor->lastname) : 'No asignado';
+        $date         = \Carbon\Carbon::parse($appointment->date)->format('d/m/Y');
+        $value        = '$ ' . number_format($appointment->value, 0, ',', '.');
 
         $components = [
             [
                 'type'       => 'body',
                 'parameters' => [
                     ['type' => 'text', 'text' => $appointment->name],
-                    ['type' => 'text', 'text' => $fecha],
+                    ['type' => 'text', 'text' => $date],
                     ['type' => 'text', 'text' => $appointment->hour],
                     ['type' => 'text', 'text' => $appointment->address],
-                    ['type' => 'text', 'text' => $especialidad],
-                    ['type' => 'text', 'text' => $nombreDoctor],
-                    ['type' => 'text', 'text' => $valor],
+                    ['type' => 'text', 'text' => $specialty],
+                    ['type' => 'text', 'text' => $doctorName],
+                    ['type' => 'text', 'text' => $value],
                 ],
             ],
         ];
 
-        $resultado = $this->whatsapp->enviarPlantilla(
+        $result = $this->whatsapp->sendTemplate(
             $phone,
             $settings->wa_appointment_template_name,
             $components,
             'cita',
         );
 
-        return $resultado['enviado']
+        return $result['enviado']
             ? ['enviado' => true]
             : ['enviado' => false, 'detalle' => 'Error en la API de WhatsApp'];
     }

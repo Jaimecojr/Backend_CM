@@ -27,7 +27,7 @@ class CarnetController extends Controller
             return response()->json(['message' => 'El celular del afiliado no es válido'], 422);
         }
 
-        $settings = $this->whatsapp->configuracionParaPlantilla('wa_template_name');
+        $settings = $this->whatsapp->configurationForTemplate('wa_template_name');
         if (!$settings) {
             return response()->json(['message' => 'Configuración de WhatsApp incompleta'], 500);
         }
@@ -44,13 +44,13 @@ class CarnetController extends Controller
             $absolutePath = storage_path("app/public/carnets/{$filename}");
 
             Storage::disk('public')->makeDirectory('carnets');
-            $this->generarPdf($affiliate, $franchises, $absolutePath);
+            $this->generatePdf($affiliate, $franchises, $absolutePath);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Error al generar el carnet'], 500);
         }
 
-        $pdfUrl    = config('app.url') . '/storage/' . $relativePath;
-        $nombreCompleto = strtoupper($affiliate->name . ' ' . $affiliate->lastname);
+        $pdfUrl   = config('app.url') . '/storage/' . $relativePath;
+        $fullName = strtoupper($affiliate->name . ' ' . $affiliate->lastname);
 
         $components = [
             [
@@ -67,35 +67,35 @@ class CarnetController extends Controller
                 'type'       => 'body',
                 'parameters' => [[
                     'type' => 'text',
-                    'text' => $nombreCompleto,
+                    'text' => $fullName,
                 ]],
             ],
         ];
 
-        $resultado = $this->whatsapp->enviarPlantilla(
+        $result = $this->whatsapp->sendTemplate(
             $affiliate->movil,
             $settings->wa_template_name,
             $components,
             'carnet',
         );
 
-        if ($resultado['enviado']) {
+        if ($result['enviado']) {
             $affiliate->carnet = 'si';
             $affiliate->save();
 
             return response()->json([
                 'message' => 'Carnet enviado exitosamente',
-                'data'    => $resultado['response'],
+                'data'    => $result['response'],
             ], 200);
         }
 
         return response()->json([
             'message' => 'Envío fallido',
-            'error'   => $resultado['response'] ?? $resultado['detalle'] ?? null,
+            'error'   => $result['response'] ?? $result['detalle'] ?? null,
         ], 422);
     }
 
-    private function generarPdf(Affiliate $affiliate, $franchises, string $savePath): void
+    private function generatePdf(Affiliate $affiliate, $franchises, string $savePath): void
     {
         $pdf = new Fpdi();
         $pdf->SetCreator('Contacto Médico');
@@ -111,16 +111,16 @@ class CarnetController extends Controller
         $pdf->AddPage('P', [$W, $H]);
         $pdf->useTemplate($tplId, 0, 0, $W, $H, true);
 
-        // Factor de escala x: referencia Zend usaba página de 595pt (A4 = 210mm)
+        // X scale factor: the original Zend reference used a 595pt page (A4 = 210mm)
         $sx = $W / 210.0;
 
-        // CREDENCIAL AFILIADO — ref: x=70, y=670, 26pt, rojo
+        // "CREDENCIAL AFILIADO" title — ref: x=70, y=670, 26pt, red
         $pdf->SetFont('helvetica', 'B', 26);
         $pdf->SetTextColor(231, 60, 60);
         $pdf->SetXY(0, 180);
         $pdf->Cell($W, 0, 'C  R  E  D  E  N  C  I  A  L    A  F  I  L  I  A  D  O', 0, 0, 'C');
 
-        // NOMBRE — ref: x=170, y=610 (670-60), 24pt, negro
+        // Affiliate name — ref: x=170, y=610 (670-60), 24pt, black
         $pdf->SetFont('helvetica', 'B', 24);
         $pdf->SetTextColor(0, 0, 0);
         $nameText = mb_strtoupper($affiliate->name . ' ' . $affiliate->lastname, 'UTF-8');
@@ -128,19 +128,19 @@ class CarnetController extends Controller
         $pdf->SetXY(($W - $nameW) / 2, 200);
         $pdf->Cell(0, 0, $nameText);
 
-        // CÉDULA — centrada igual que el nombre
+        // ID card number — centered like the name
         $ccText = 'CC. ' . $affiliate->id_card;
         $ccW    = $pdf->GetStringWidth($ccText);
         $pdf->SetXY(($W - $ccW) / 2, 210);
         $pdf->Cell(0, 0, $ccText);
 
-        // BENEFICIARIOS label — ref: x=70, y=520 (580-60), 22pt, rojo
+        // "BENEFICIARIOS" label — ref: x=70, y=520 (580-60), 22pt, red
         $pdf->SetFont('helvetica', 'B', 22);
         $pdf->SetTextColor(231, 60, 60);
         $pdf->SetXY(24.7 * $sx, 240);
         $pdf->Cell(0, 0, 'BENEFICIARIOS');
 
-        // LISTA BENEFICIARIOS — ref: x=70, y=480 (520-40), paso 25pt=8.8mm, 22pt
+        // Beneficiary list — ref: x=70, y=480 (520-40), 25pt=8.8mm step, 22pt
         $pdf->SetFont('helvetica', 'B', 22);
         $pdf->SetTextColor(0, 0, 0);
         $yBene = 255;
@@ -150,42 +150,43 @@ class CarnetController extends Controller
             $yBene += 8.8;
         }
 
-        // VÁLIDO HASTA — ref: x=486, y=210, 22pt, azul
-        $meses = [
+        // "VÁLIDO HASTA" (valid until) — ref: x=486, y=210, 22pt, blue.
+        // Month names stay in Spanish — this text is printed on the card itself.
+        $months = [
             1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO',    4 => 'ABRIL',
             5 => 'MAYO',  6 => 'JUNIO',   7 => 'JULIO',    8 => 'AGOSTO',
             9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE',
         ];
 
-        $mesNum = (int) date('n', strtotime($affiliate->validity_end));
-        $mes    = $meses[$mesNum];
-        $anio   = date('d/y', strtotime($affiliate->validity_end));
+        $monthNum = (int) date('n', strtotime($affiliate->validity_end));
+        $month    = $months[$monthNum];
+        $year     = date('d/y', strtotime($affiliate->validity_end));
 
-        $xValido = 140 * $sx;
+        $xValidUntil = 140 * $sx;
 
         $pdf->SetFont('helvetica', 'B', 20);
         $pdf->SetTextColor(38, 198, 218);
-        $pdf->SetXY($xValido, 330);
+        $pdf->SetXY($xValidUntil, 330);
         $pdf->Cell(0, 0, 'VÁLIDO HASTA');
 
         $pdf->SetFont('helvetica', 'B', 20);
         $pdf->SetTextColor(231, 60, 60);
-        $pdf->SetXY($xValido, 340);
-        $pdf->Cell(0, 0, $mes);
-        $xAnio = $xValido + $pdf->GetStringWidth($mes) + 8;
-        $pdf->SetXY($xAnio, 340);
-        $pdf->Cell(0, 0, $anio);
+        $pdf->SetXY($xValidUntil, 340);
+        $pdf->Cell(0, 0, $month);
+        $xYear = $xValidUntil + $pdf->GetStringWidth($month) + 8;
+        $pdf->SetXY($xYear, 340);
+        $pdf->Cell(0, 0, $year);
 
-        // FRANQUICIAS — ref: 20pt, x dinámico desde x=5, 3 por fila, paso 25pt=8.8mm
+        // Franchise footer — ref: 20pt, dynamic x starting at x=5, 3 per row, 25pt=8.8mm step
         $pdf->SetFont('helvetica', 'B', 18);
         $pdf->SetTextColor(0, 0, 0);
 
-        $franArr = $franchises->all();
-        $total   = count($franArr);
-        $yFran   = 385;
-        $xFran   = 1.76 * $sx;   // ref x=5pt
+        $franchiseArr = $franchises->all();
+        $total        = count($franchiseArr);
+        $yFran        = 385;
+        $xFran        = 1.76 * $sx;   // ref x=5pt
 
-        foreach ($franArr as $key => $fran) {
+        foreach ($franchiseArr as $key => $fran) {
             $isLast     = ($key === $total - 1);
             $endOfRow   = (($key + 1) % 3 === 0);
             $sep        = (!$isLast && !$endOfRow) ? ' -' : '';

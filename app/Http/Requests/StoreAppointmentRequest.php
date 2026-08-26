@@ -7,14 +7,12 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Sin override de failedValidation(): a diferencia de Affiliate/User, este
- * endpoint ya devolvía 422 nativamente (comportamiento por defecto de
- * Laravel) antes de que este retrofit introdujera Form Requests, y ya tenía
- * tráfico real desde frontend-cm consumiéndolo. Alinearlo con la convención
- * de 400 usada en el resto de la app arriesgaba romper el manejo de errores
- * ya en producción de un endpoint en vivo por un beneficio puramente
- * cosmético, así que se dejó tal cual. Ver CLAUDE.md, sección "Código HTTP
- * en fallos de validación: split 400 / 422 entre módulos".
+ * No failedValidation() override here: unlike Affiliate/User, this endpoint
+ * already returned 422 natively (Laravel's default behavior) before this
+ * retrofit introduced Form Requests, and already had real traffic from
+ * frontend-cm consuming it. Aligning it with the 400 convention used
+ * elsewhere in the app risked breaking a live endpoint's error handling
+ * already in production for a purely cosmetic benefit, so it was left as-is.
  */
 class StoreAppointmentRequest extends FormRequest
 {

@@ -56,6 +56,6 @@ class WhatsAppWebhookController extends Controller
                . "https://beacons.ai/contactomedicocolombia\n\n"
                . "¡Estamos para servirte! 🙂";
 
-        $this->whatsapp->enviarTexto($phone, $texto);
+        $this->whatsapp->sendText($phone, $texto);
     }
 }

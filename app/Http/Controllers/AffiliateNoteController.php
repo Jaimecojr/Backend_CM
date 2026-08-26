@@ -54,7 +54,7 @@ class AffiliateNoteController extends Controller
     public function destroy(Request $request, Affiliate $affiliate, AffiliateNote $note)
     {
         // Solo super admin (type == 1) puede eliminar
-        if (!$request->user()->esSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             return response()->json([
                 'message' => 'No tienes permisos para eliminar notas.',
             ], 403);

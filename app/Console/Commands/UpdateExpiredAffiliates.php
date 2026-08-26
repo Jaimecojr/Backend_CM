@@ -14,7 +14,7 @@ class UpdateExpiredAffiliates extends Command
 
     public function handle(): void
     {
-        $total = Affiliate::activosVencidos()->update(['stade' => 2]);
+        $total = Affiliate::activeExpired()->update(['stade' => 2]);
 
         $this->info("Afiliados inactivados: {$total}");
     }

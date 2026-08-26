@@ -398,6 +398,6 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
   una excepción de red dentro de `Http::fake()` produce un segfault.
 
 ## Reglas Generales
-1. **Idioma:** Los comentarios del código, nombres de variables descriptivas, strings de respuesta JSON y mensajes de validación deben estar en **español**.
+1. **Idioma:** El código en sí —comentarios, PHPDoc, nombres de métodos, propiedades y variables— debe estar en **inglés**, siguiendo la convención estándar de desarrollo (esto revierte la regla anterior de este documento). Los strings de respuesta JSON y mensajes de validación que ve el usuario final del panel siguen en **español** — son producto, no código, y el panel es para asesores/franquicias colombianas. Los comentarios de código no deben referenciar `CLAUDE.md` ni otros documentos internos por nombre; deben ser autocontenidos y explicar el WHY directamente.
 2. **Validación:** Validar siempre el input del Request antes de procesarlo o insertarlo en la base de datos.
 3. **Manejo de Errores:** Retornar códigos HTTP adecuados (200 OK, 422 Unprocessable Entity, 500 Server Error) con un formato JSON consistente.

@@ -20,7 +20,7 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Mostrar todos los afiliados
+     * List all affiliates
      */
     public function index(Request $request)
     {
@@ -70,7 +70,7 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Crear un nuevo afiliado
+     * Create a new affiliate
      */
     public function store(StoreAffiliateRequest $request)
     {
@@ -87,7 +87,7 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Mostrar un afiliado específico
+     * Show a specific affiliate
      */
     public function show($id)
     {
@@ -108,7 +108,7 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Actualizar un afiliado existente
+     * Update an existing affiliate
      */
     public function update(UpdateAffiliateRequest $request, $id)
     {
@@ -120,22 +120,21 @@ class AffiliateController extends Controller
             ], 404);
         }
 
-        // `validity` es inmutable (ver CLAUDE.md): se valida su formato si se
-        // envía, pero nunca se persiste en una actualización.
-        $camposExcluidos = ['validity'];
+        // `validity` is immutable: its format is validated if sent, but it's
+        // never persisted on an update.
+        $excludedFields = ['validity'];
 
-        // Solo el super admin puede cambiar `stade` manualmente — el flujo normal
-        // es que el cron lo inactive al vencer y la renovación lo reactive. Ver
-        // regla de negocio en CLAUDE.md ("Regla de acceso para cambio manual de stade").
-        // El flujo de renovación (usado también por franquicias, type=2) envía
-        // `stade = 1` junto con otros campos como parte de la misma petición: en
-        // vez de rechazar toda la actualización con 403, se ignora silenciosamente
-        // el campo `stade` para quien no es super admin y se persiste el resto.
-        if (!$request->user()->esSuperAdmin()) {
-            $camposExcluidos[] = 'stade';
+        // Only a super admin can change `stade` manually — the normal flow is
+        // that a cron deactivates it on expiry and a renewal reactivates it.
+        // The renewal flow (also used by franchises, type=2) sends `stade = 1`
+        // together with other fields as part of the same request: instead of
+        // rejecting the whole update with 403, `stade` is silently dropped for
+        // non-super-admins and the rest of the fields are still persisted.
+        if (!$request->user()->isSuperAdmin()) {
+            $excludedFields[] = 'stade';
         }
 
-        $affiliate->update(Arr::except($request->validated(), $camposExcluidos));
+        $affiliate->update(Arr::except($request->validated(), $excludedFields));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             $this->beneficiarySync->sync($affiliate, $request->beneficiaries);
@@ -148,7 +147,7 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Eliminar un afiliado
+     * Delete an affiliate
      */
     public function destroy($id)
     {
@@ -167,17 +166,17 @@ class AffiliateController extends Controller
         ], 200);
     }
     /**
-     * Afiliados cuya vigencia vence hoy
+     * Affiliates whose validity expires today
      */
     public function expiringToday()
     {
-        $hoy = Carbon::today()->toDateString();
+        $today = Carbon::today()->toDateString();
 
         $query = Affiliate::select(['id', 'name', 'lastname', 'id_card', 'movil', 'phone', 'validity_end', 'stade'])
             ->with(['counselor:id,name,lastname', 'agreement:id,name'])
-            ->activosVencenHoy();
+            ->activeExpiringToday();
 
-        if (!auth()->user()->esSuperAdmin()) {
+        if (!auth()->user()->isSuperAdmin()) {
             $query->where('user_id', auth()->id());
         }
 
@@ -186,7 +185,7 @@ class AffiliateController extends Controller
         return response()->json([
             'message' => 'Afiliados que vencen hoy',
             'data'    => $affiliates,
-            'date'    => $hoy,
+            'date'    => $today,
         ], 200);
     }
 
@@ -217,8 +216,9 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Busca un afiliado por cédula y valida que esté vigente para crear una cita.
-     * Retorna el afiliado con sus beneficiarios si está activo y no vencido.
+     * Looks up an affiliate by ID card and validates that it's within its
+     * validity period before allowing an appointment to be created.
+     * Returns the affiliate with its beneficiaries if it's active and not expired.
      */
     public function byIdCard(Request $request)
     {
@@ -245,9 +245,9 @@ class AffiliateController extends Controller
         }
 
         if ($affiliate->validity_end && Carbon::parse($affiliate->validity_end)->lt(Carbon::today())) {
-            $fecha = Carbon::parse($affiliate->validity_end)->format('d/m/Y');
+            $expiredOn = Carbon::parse($affiliate->validity_end)->format('d/m/Y');
             return response()->json([
-                'message' => "La vigencia del afiliado venció el {$fecha}. Debe renovar antes de crear una cita.",
+                'message' => "La vigencia del afiliado venció el {$expiredOn}. Debe renovar antes de crear una cita.",
             ], 422);
         }
 
@@ -258,10 +258,10 @@ class AffiliateController extends Controller
     }
 
     /**
-     * Consulta pública de estado de un afiliado y su grupo familiar por cédula.
-     * A diferencia de byIdCard() (uso interno para crear citas), no bloquea
-     * afiliados inactivos o vencidos: siempre retorna los datos si el
-     * registro existe, para que el sitio público muestre el aviso de estado.
+     * Public lookup of an affiliate's status and family group by ID card.
+     * Unlike byIdCard() (internal use for creating appointments), it doesn't
+     * block inactive or expired affiliates: it always returns the data if the
+     * record exists, so the public site can show the status notice.
      */
     public function publicStatus(Request $request)
     {

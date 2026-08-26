@@ -30,7 +30,7 @@ class WhatsAppClientTest extends TestCase
         ]);
         $this->crearSettingCompleto();
 
-        $resultado = (new WhatsAppClient())->enviarPlantilla(
+        $resultado = (new WhatsAppClient())->sendTemplate(
             '3001234567',
             'plantilla_test',
             [['type' => 'body', 'parameters' => [['type' => 'text', 'text' => 'Hola']]]],
@@ -50,7 +50,7 @@ class WhatsAppClientTest extends TestCase
     public function test_enviar_plantilla_falla_con_configuracion_incompleta(): void
     {
         // Sin Setting creado.
-        $resultado = (new WhatsAppClient())->enviarPlantilla(
+        $resultado = (new WhatsAppClient())->sendTemplate(
             '3001234567',
             'plantilla_test',
             [],
@@ -68,7 +68,7 @@ class WhatsAppClientTest extends TestCase
         });
         $this->crearSettingCompleto();
 
-        $resultado = (new WhatsAppClient())->enviarPlantilla(
+        $resultado = (new WhatsAppClient())->sendTemplate(
             '3001234567',
             'plantilla_test',
             [],

@@ -16,8 +16,8 @@ class UserSuperAdminTest extends TestCase
         $counselor = User::factory()->create(['type' => 2]);
         $advisor  = User::factory()->create(['type' => 3]);
 
-        $this->assertTrue($admin->esSuperAdmin());
-        $this->assertFalse($counselor->esSuperAdmin());
-        $this->assertFalse($advisor->esSuperAdmin());
+        $this->assertTrue($admin->isSuperAdmin());
+        $this->assertFalse($counselor->isSuperAdmin());
+        $this->assertFalse($advisor->isSuperAdmin());
     }
 }
