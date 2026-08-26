@@ -20,9 +20,9 @@ class AppointmentController extends Controller
     public function index(Request $request)
     {
         $perPage = (int) $request->get('per_page', 20);
-        $search  = trim($request->get('search', ''));
-        $date    = trim($request->get('date', ''));
-        $period  = trim($request->get('period', 'pending'));
+        $search  = trim((string) $request->get('search', ''));
+        $date    = trim((string) $request->get('date', ''));
+        $period  = trim((string) $request->get('period', 'pending'));
 
         $query = Appointment::with([
             'doctor:id,name,lastname',
