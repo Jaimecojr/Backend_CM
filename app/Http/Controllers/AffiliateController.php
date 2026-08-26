@@ -160,6 +160,12 @@ class AffiliateController extends Controller
             ], 404);
         }
 
+        if ($request->has('stade') && !$request->user()->esSuperAdmin()) {
+            return response()->json([
+                'message' => 'No tiene permisos para cambiar el estado del afiliado.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'counselor_id'       => 'nullable|exists:counselors,id',
             'contract_code'      => 'nullable|string|max:100',
