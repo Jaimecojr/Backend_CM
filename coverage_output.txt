@@ -1,7 +1,0 @@
-
-  [37;44m INFO [39;49m Configuration cache cleared successfully.  
-
-
-  [37;41;1m ERROR [39;49;22m Code coverage driver not available. Did you set ]8;;https://xdebug.org/docs/code_coverage#mode\Xdebug's coverage mode]8;;\?
-
-[37;41mScript @php artisan test --coverage --min=0 handling the test:coverage event returned with error code 1[39;49m
