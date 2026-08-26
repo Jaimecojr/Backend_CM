@@ -120,18 +120,22 @@ class AffiliateController extends Controller
             ], 404);
         }
 
+        // `validity` es inmutable (ver CLAUDE.md): se valida su formato si se
+        // envía, pero nunca se persiste en una actualización.
+        $camposExcluidos = ['validity'];
+
         // Solo el super admin puede cambiar `stade` manualmente — el flujo normal
         // es que el cron lo inactive al vencer y la renovación lo reactive. Ver
         // regla de negocio en CLAUDE.md ("Regla de acceso para cambio manual de stade").
-        if ($request->has('stade') && !$request->user()->esSuperAdmin()) {
-            return response()->json([
-                'message' => 'No tiene permisos para cambiar el estado del afiliado.',
-            ], 403);
+        // El flujo de renovación (usado también por franquicias, type=2) envía
+        // `stade = 1` junto con otros campos como parte de la misma petición: en
+        // vez de rechazar toda la actualización con 403, se ignora silenciosamente
+        // el campo `stade` para quien no es super admin y se persiste el resto.
+        if (!$request->user()->esSuperAdmin()) {
+            $camposExcluidos[] = 'stade';
         }
 
-        // `validity` es inmutable (ver CLAUDE.md): se valida su formato si se
-        // envía, pero nunca se persiste en una actualización.
-        $affiliate->update(Arr::except($request->validated(), ['validity']));
+        $affiliate->update(Arr::except($request->validated(), $camposExcluidos));
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             $this->beneficiarySync->sync($affiliate, $request->beneficiaries);
