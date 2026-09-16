@@ -18,8 +18,6 @@ class Beneficiary extends Model
         'bithdate',
     ];
 
-    // Relaciones
-    // El beneficiario pertenece a un afiliado
     public function affiliate()
     {
         return $this->belongsTo(Affiliate::class);

@@ -49,7 +49,7 @@ class BeneficiaryController extends Controller
             ], 400);
         }
 
-        $beneficiary = Beneficiary::create($request->all());
+        $beneficiary = Beneficiary::create($validator->validated());
 
         return response()->json([
             'message' => 'Beneficiario creado correctamente',
@@ -103,7 +103,7 @@ class BeneficiaryController extends Controller
             ], 400);
         }
 
-        $beneficiary->update($request->all());
+        $beneficiary->update($validator->validated());
 
         return response()->json([
             'message' => 'Beneficiario actualizado correctamente',
