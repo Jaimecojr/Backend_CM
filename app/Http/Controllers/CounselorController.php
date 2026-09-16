@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Counselor;
+use App\Support\IdCardLookup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -227,7 +228,7 @@ class CounselorController extends Controller
 
     public function checkIdCard(Request $request)
     {
-        $idCard = preg_replace('/\D/', '', (string) $request->query('id_card', ''));
+        $idCard = IdCardLookup::normalize((string) $request->query('id_card', ''));
         $ignoreId = $request->query('ignore_id'); // optional (for editing)
 
         if ($idCard === '') {
@@ -237,13 +238,7 @@ class CounselorController extends Controller
             ], 200);
         }
 
-        $q = Counselor::query()->where('id_card', $idCard);
-
-        if ($ignoreId) {
-            $q->where('id', '!=', (int) $ignoreId);
-        }
-
-        $exists = $q->exists();
+        $exists = IdCardLookup::exists(Counselor::class, $idCard, $ignoreId ? (int) $ignoreId : null);
 
         return response()->json([
             'exists' => $exists,

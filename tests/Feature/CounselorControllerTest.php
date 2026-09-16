@@ -89,4 +89,22 @@ class CounselorControllerTest extends TestCase
         $check = $this->actingAs($admin)->getJson("/api/counselors/check-id-card?id_card={$idCard}");
         $check->assertStatus(200);
     }
+
+    public function test_check_id_card_detecta_duplicado_y_respeta_ignore_id(): void
+    {
+        $admin = User::factory()->create();
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $created->json('data.id');
+        $idCard = $created->json('data.id_card');
+
+        $duplicate = $this->actingAs($admin)->getJson("/api/counselors/check-id-card?id_card={$idCard}");
+        $duplicate->assertStatus(200);
+        $duplicate->assertJson(['exists' => true]);
+
+        $ignored = $this->actingAs($admin)->getJson(
+            "/api/counselors/check-id-card?id_card={$idCard}&ignore_id={$id}"
+        );
+        $ignored->assertStatus(200);
+        $ignored->assertJson(['exists' => false]);
+    }
 }

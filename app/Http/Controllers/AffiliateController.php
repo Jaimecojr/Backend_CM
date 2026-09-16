@@ -8,6 +8,7 @@ use App\Http\Requests\StoreAffiliateRequest;
 use App\Http\Requests\UpdateAffiliateRequest;
 use App\Models\Affiliate;
 use App\Services\BeneficiarySyncService;
+use App\Support\IdCardLookup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -191,7 +192,7 @@ class AffiliateController extends Controller
 
     public function checkIdCard(Request $request)
     {
-        $idCard = preg_replace('/\D/', '', (string) $request->query('id_card', ''));
+        $idCard = IdCardLookup::normalize((string) $request->query('id_card', ''));
         $ignoreId = $request->query('ignore_id');
 
         if ($idCard === '') {
@@ -201,13 +202,7 @@ class AffiliateController extends Controller
             ], 200);
         }
 
-        $q = Affiliate::query()->where('id_card', $idCard);
-
-        if ($ignoreId) {
-            $q->where('id', '!=', (int) $ignoreId);
-        }
-
-        $exists = $q->exists();
+        $exists = IdCardLookup::exists(Affiliate::class, $idCard, $ignoreId ? (int) $ignoreId : null);
 
         return response()->json([
             'exists' => $exists,

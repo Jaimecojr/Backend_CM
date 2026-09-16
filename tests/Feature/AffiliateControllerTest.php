@@ -140,4 +140,38 @@ class AffiliateControllerTest extends TestCase
         $this->assertCount(1, $data);
         $this->assertSame(2, $data[0]['stade']);
     }
+
+    public function test_check_id_card_detecta_duplicado(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        Affiliate::factory()->create(['id_card' => '777888999']);
+
+        $response = $this->actingAs($admin)->getJson('/api/affiliates/check-id-card?id_card=777888999');
+
+        $response->assertStatus(200);
+        $response->assertJson(['exists' => true]);
+    }
+
+    public function test_check_id_card_ignora_el_propio_registro_con_ignore_id(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $affiliate = Affiliate::factory()->create(['id_card' => '666777888']);
+
+        $response = $this->actingAs($admin)->getJson(
+            "/api/affiliates/check-id-card?id_card=666777888&ignore_id={$affiliate->id}"
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['exists' => false]);
+    }
+
+    public function test_check_id_card_vacio_no_consulta_la_base_de_datos(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+
+        $response = $this->actingAs($admin)->getJson('/api/affiliates/check-id-card?id_card=');
+
+        $response->assertStatus(200);
+        $response->assertJson(['exists' => false, 'message' => 'Documento de identidad vacío']);
+    }
 }
