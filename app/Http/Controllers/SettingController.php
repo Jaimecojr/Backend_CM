@@ -10,8 +10,12 @@ use Illuminate\Support\Facades\Validator;
 
 class SettingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        if (!$request->user()->isSuperAdmin()) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         $setting = Setting::first();
 
         if (!$setting) {
@@ -26,6 +30,10 @@ class SettingController extends Controller
 
     public function update(Request $request, Setting $setting)
     {
+        if (!$request->user()->isSuperAdmin()) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'wa_api_version'               => 'required|string|max:255',
             'wa_phone_number_id'           => 'required|string|max:255',
