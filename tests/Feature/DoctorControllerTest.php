@@ -114,4 +114,43 @@ class DoctorControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonFragment(['id' => $doctor->id]);
     }
+
+    public function test_update_rechaza_name_vacio_enviado_explicitamente(): void
+    {
+        $admin = User::factory()->create();
+        $doctor = Doctor::factory()->create();
+
+        $response = $this->actingAs($admin)->patchJson("/api/doctors/{$doctor->id}", [
+            'name' => '',
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJsonValidationErrors(['name']);
+    }
+
+    public function test_update_rechaza_movil_invalido(): void
+    {
+        $admin = User::factory()->create();
+        $doctor = Doctor::factory()->create();
+
+        $response = $this->actingAs($admin)->patchJson("/api/doctors/{$doctor->id}", [
+            'movil' => '123',
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJsonValidationErrors(['movil']);
+    }
+
+    public function test_update_permite_limpiar_email_enviando_null(): void
+    {
+        $admin = User::factory()->create();
+        $doctor = Doctor::factory()->create();
+
+        $response = $this->actingAs($admin)->patchJson("/api/doctors/{$doctor->id}", [
+            'email' => null,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('doctors', ['id' => $doctor->id, 'email' => null]);
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateDoctorRequest;
 use App\Models\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -217,7 +218,7 @@ class DoctorController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateDoctorRequest $request, $id)
     {
         $doctor = Doctor::find($id);
 
@@ -227,42 +228,7 @@ class DoctorController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'name'            => 'nullable|string|max:255',
-            'lastname'        => 'nullable|string|max:255',
-            'email'           => 'nullable|email|max:255',
-            'specialty_id'    => 'nullable|exists:specialties,id',
-            'city_id'         => 'nullable|exists:cities,id',
-            'phone'           => 'nullable|string|max:255',
-            'movil'           => 'nullable|digits:10',
-            'address'         => 'nullable|string|max:255',
-            'secretary_name'  => 'nullable|string|max:255',
-            'value_agreement' => 'nullable|numeric|min:10000',
-            'state'           => 'nullable|in:1,2',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error en la validación',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-
-        if ($request->filled('name')) $doctor->name = $request->name;
-        if ($request->filled('lastname')) $doctor->lastname = $request->lastname;
-        if ($request->has('email')) $doctor->email = $request->email;
-        if ($request->filled('specialty_id')) $doctor->specialty_id = $request->specialty_id;
-        if ($request->filled('city_id')) $doctor->city_id = $request->city_id;
-        
-        if ($request->has('phone')) $doctor->phone = $request->phone;
-        if ($request->has('movil')) $doctor->movil = $request->movil;
-        if ($request->has('address')) $doctor->address = $request->address;
-        if ($request->has('secretary_name')) $doctor->secretary_name = $request->secretary_name;
-        
-        if ($request->filled('value_agreement')) $doctor->value_agreement = $request->value_agreement;
-        if ($request->filled('state')) $doctor->state = $request->state;
-
-        $doctor->save();
+        $doctor->update($request->validated());
 
         return response()->json([
             'message' => 'Médico actualizado correctamente',
