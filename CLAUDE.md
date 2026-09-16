@@ -198,9 +198,18 @@ GET  /api/public/specialties                     → SpecialtyController@publicI
 GET  /api/public/departments                     → DepartmentController@index
 GET  /api/public/departments/{department}/cities → CityController@getByDepartment
 POST /api/public/affiliate-request              → MembershipFormController@store
+POST /api/public/affiliate-status               → AffiliateController@publicStatus
 GET  /api/public/content-allies                 → ContentAllyController@publicIndex
 GET  /api/public/content-specialists            → ContentSpecialistController@publicIndex
+GET  /api/public/franchises                     → UserController@publicActiveFranchises
 ```
+
+- **`affiliate-status`**: consulta de estado de afiliación por cédula (`document_number`), usada por
+  `affiliateService.ts` en el sitio público. Devuelve solo campos seguros (`id`, `name`, `lastname`,
+  `id_card`, `stade`, `validity_end`, beneficiarios). Limitada a `throttle:10,1` (10 consultas por
+  minuto por IP) para evitar cosecha masiva de PII por fuerza bruta de cédulas.
+- **`franchises`**: lista de franquicias activas (`state = 1, type = 2`) con ciudad, usada por
+  `Footer.tsx` para mostrar puntos de atención en el sitio público.
 
 ### Por qué no reutilizar los endpoints privados
 Mover rutas privadas fuera del grupo `auth:sanctum` expone todos sus campos (incluyendo datos internos sensibles) a cualquier visitante. El patrón `publicIndex` es más seguro porque controla explícitamente qué se devuelve, independientemente de cambios futuros al método privado.
@@ -240,8 +249,8 @@ Tras la revisión de arquitectura del backend, la lógica repetida entre control
 - **`configuracionParaPlantilla(string $campoPlantilla): ?Setting`** — retorna el `Setting` si la configuración básica (`wa_api_version`, `wa_phone_number_id`, `wa_bearer_token`) y el campo de plantilla indicado (`wa_template_name` o `wa_appointment_template_name`) están completos; `null` si falta algo. Los controladores deben usar este método antes de armar el payload de una plantilla — **no repetir el chequeo manual de `Setting::first()` + campos vacíos**.
 - El código de idioma `es_CO` vive fijo dentro de la clase — no debe duplicarse en ningún controlador.
 
-### `User::esSuperAdmin(): bool`
-Punto único para verificar si el usuario autenticado es super administrador (`type === 1`). Usado en `AffiliateController`, `AffiliateNoteController`, `AgreementController`, `AppointmentController` y `DashboardController`. **No volver a escribir `$user->type === 1` inline** en ningún controlador nuevo — llamar siempre a `$user->esSuperAdmin()`.
+### `User::isSuperAdmin(): bool`
+Punto único para verificar si el usuario autenticado es super administrador (`type === 1`). Usado en `AffiliateController`, `AffiliateNoteController`, `AgreementController`, `AppointmentController`, `DashboardController` y `SettingController`. **No volver a escribir `$user->type === 1` inline** en ningún controlador nuevo — llamar siempre a `$user->isSuperAdmin()`.
 
 ### Scopes de vigencia en `Affiliate`
 El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade` + `validity_end` usadas en distintos módulos — usarlos en vez de escribir la condición a mano:
