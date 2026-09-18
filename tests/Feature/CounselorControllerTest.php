@@ -107,4 +107,50 @@ class CounselorControllerTest extends TestCase
         $ignored->assertStatus(200);
         $ignored->assertJson(['exists' => false]);
     }
+
+    public function test_update_rechaza_name_vacio_enviado_explicitamente(): void
+    {
+        $admin = User::factory()->create();
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $response = $this->actingAs($admin)->patchJson("/api/counselors/{$id}", [
+            'name' => '',
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJsonValidationErrors(['name']);
+    }
+
+    public function test_update_permite_limpiar_email_enviando_null(): void
+    {
+        $admin = User::factory()->create();
+        $payload = $this->payloadValido();
+        $payload['email'] = 'inicial@example.com';
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $payload);
+        $id = $created->json('data.id');
+
+        $response = $this->actingAs($admin)->patchJson("/api/counselors/{$id}", [
+            'email' => null,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('counselors', ['id' => $id, 'email' => null]);
+    }
+
+    public function test_update_hashea_la_nueva_password(): void
+    {
+        $admin = User::factory()->create();
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $response = $this->actingAs($admin)->patchJson("/api/counselors/{$id}", [
+            'password' => 'nuevaClave123',
+        ]);
+
+        $response->assertStatus(200);
+        $stored = \App\Models\Counselor::find($id)->password;
+        $this->assertNotSame('nuevaClave123', $stored);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('nuevaClave123', $stored));
+    }
 }

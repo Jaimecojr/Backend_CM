@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateCounselorRequest;
 use App\Models\Counselor;
 use App\Support\IdCardLookup;
 use Illuminate\Http\Request;
@@ -12,7 +13,9 @@ use Illuminate\Support\Facades\Validator;
 
 class CounselorController extends Controller
 {
-    private function typeContraValues(): array
+    // Public and static so UpdateCounselorRequest can reuse the same list
+    // instead of duplicating the 4 valid values for `type_contra`.
+    public static function typeContraValues(): array
     {
         return [
             'Término Fijo',
@@ -132,7 +135,7 @@ class CounselorController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateCounselorRequest $request, $id)
     {
         $counselor = Counselor::find($id);
 
@@ -142,63 +145,19 @@ class CounselorController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'name'           => 'nullable|string|max:255',
-            'lastname'       => 'nullable|string|max:255',
-            'id_card'        => 'nullable|regex:/^\d+$/|max:100|unique:counselors,id_card,' . $id,
-            'address'        => 'nullable|string|max:255',
-            'date_admission' => 'nullable|date',
+        $data = $request->validated();
 
-            'type_contra'    => 'nullable|in:' . implode(',', $this->typeContraValues()),
-
-            // nullable + unique: only validates uniqueness if a value is sent
-            'email'          => 'nullable|email|max:255|unique:counselors,email,' . $id,
-            'password'       => 'nullable|string|min:6',
-
-            'rol'            => 'nullable|numeric',
-            'phone'          => 'nullable|string|max:255',
-            'movil'          => 'nullable|digits:10',
-
-            'state'          => 'nullable|in:1,2',
-
-            'city_id'        => 'nullable|exists:cities,id',
-            'user_id'        => 'nullable|exists:users,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Error en la validación',
-                'errors' => $validator->errors(),
-            ], 400);
+        // Counselor has no 'hashed' cast (unlike User), so password must be
+        // hashed explicitly here — persisting validated() as-is would store
+        // the plaintext value. If it wasn't sent (or was sent as null), it's
+        // dropped so the existing hash on the row is left untouched.
+        if (array_key_exists('password', $data) && $data['password'] !== null) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
         }
 
-        if ($request->filled('name')) $counselor->name = $request->name;
-        if ($request->filled('lastname')) $counselor->lastname = $request->lastname;
-        if ($request->filled('id_card')) $counselor->id_card = $request->id_card;
-        if ($request->filled('address')) $counselor->address = $request->address;
-        if ($request->filled('date_admission')) $counselor->date_admission = $request->date_admission;
-
-        if ($request->filled('type_contra')) $counselor->type_contra = $request->type_contra;
-
-        // NOTE: to allow clearing the email (setting it to null), it must be handled with has()
-        if ($request->has('email')) {
-            $counselor->email = $request->email; // can be null
-        }
-
-        if ($request->filled('password')) {
-            $counselor->password = Hash::make($request->password);
-        }
-
-        if ($request->filled('rol')) $counselor->rol = $request->rol;
-        if ($request->filled('phone')) $counselor->phone = $request->phone;
-        if ($request->filled('movil')) $counselor->movil = $request->movil;
-
-        if ($request->filled('state')) $counselor->state = $request->state;
-
-        if ($request->filled('city_id')) $counselor->city_id = $request->city_id;
-        if ($request->filled('user_id')) $counselor->user_id = $request->user_id;
-
-        $counselor->save();
+        $counselor->update($data);
 
         return response()->json([
             'message' => 'Vendedor actualizado correctamente',
