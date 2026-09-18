@@ -254,9 +254,9 @@ Punto único para verificar si el usuario autenticado es super administrador (`t
 
 ### Scopes de vigencia en `Affiliate`
 El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade` + `validity_end` usadas en distintos módulos — usarlos en vez de escribir la condición a mano:
-- **`scopeActivosVencidos()`** — `stade = 1` y `validity_end < hoy`. Usado por el comando `affiliates:update-expired`.
-- **`scopeActivosVencenHoy()`** — `stade = 1` y `validity_end = hoy`. Usado por `AffiliateController::expiringToday()`.
-- **`scopeInactivosPorVencimiento()`** — `stade = 2` y `validity_end < hoy`. Usado por `DashboardController::stats()` (métrica `inactive_by_expiry`).
+- **`scopeActiveExpired()`** — `stade = 1` y `validity_end < hoy`. Usado por el comando `affiliates:update-expired`.
+- **`scopeActiveExpiringToday()`** — `stade = 1` y `validity_end = hoy`. Usado por `AffiliateController::expiringToday()`.
+- **`scopeInactiveByExpiry()`** — `stade = 2` y `validity_end < hoy`. Usado por `DashboardController::stats()` (métrica `inactive_by_expiry`).
 
 ### `AuthController`
 Login y logout viven en `app/Http/Controllers/AuthController.php` (métodos `login`/`logout`), registrados en `routes/web.php` (`POST /login`, `POST /logout`). Ya no son closures inline en el archivo de rutas — la lógica de la cookie `auth_hint` (ver sección arriba) vive dentro de estos métodos.

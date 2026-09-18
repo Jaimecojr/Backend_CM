@@ -98,9 +98,9 @@ class DashboardController extends Controller
                 ->get()
                 ->groupBy('user_id');
 
-            $mesesPorFranquicia = function ($totalsPorUsuario, $franchiseId) {
+            $monthsByFranchise = function ($totalsByUser, $franchiseId) {
                 $months = array_fill(0, 12, 0);
-                foreach ($totalsPorUsuario->get($franchiseId, []) as $row) {
+                foreach ($totalsByUser->get($franchiseId, []) as $row) {
                     $months[$row->mes - 1] = (int) $row->total;
                 }
                 return $months;
@@ -109,10 +109,10 @@ class DashboardController extends Controller
             $data['by_franchise'] = [
                 'users' => $franchises->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
                 'appointments_by_franchise' => $franchises
-                    ->map(fn ($f) => $mesesPorFranquicia($apptTotals, $f->id))
+                    ->map(fn ($f) => $monthsByFranchise($apptTotals, $f->id))
                     ->values(),
                 'affiliates_by_franchise' => $franchises
-                    ->map(fn ($f) => $mesesPorFranquicia($affilTotals, $f->id))
+                    ->map(fn ($f) => $monthsByFranchise($affilTotals, $f->id))
                     ->values(),
             ];
         }
