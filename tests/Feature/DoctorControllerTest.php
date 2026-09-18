@@ -153,4 +153,20 @@ class DoctorControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('doctors', ['id' => $doctor->id, 'email' => null]);
     }
+
+    public function test_update_con_payload_invalido_y_doctor_inexistente_retorna_400(): void
+    {
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->patchJson('/api/doctors/999999', [
+            'movil' => '123',
+        ]);
+
+        // La validación del Form Request corre antes de Doctor::find($id) —
+        // por eso un payload inválido contra un id inexistente responde 400
+        // (validación) en vez de 404 (no encontrado). Es el orden real de
+        // Laravel para Form Requests inyectadas por tipo, no un bug.
+        $response->assertStatus(400);
+        $response->assertJsonValidationErrors(['movil']);
+    }
 }

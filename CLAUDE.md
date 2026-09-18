@@ -125,7 +125,7 @@ Al definir las reglas del `Validator::make()` en cualquier controlador, aplica s
 
 | Campo | Regla Laravel |
 |---|---|
-| `movil` (celular) | `'nullable\|digits:10'` — exactamente 10 dígitos numéricos. **Excepción:** `AffiliateController::store()` usa `'required\|digits:10'` (ver sección Afiliados arriba) porque la columna es `NOT NULL`. |
+| `movil` (celular) | `'nullable\|digits:10'` — exactamente 10 dígitos numéricos. **Excepción:** `AffiliateController::store()` usa `'required\|digits:10'` (ver sección Afiliados arriba) porque la columna es `NOT NULL`. `UpdateDoctorRequest` aplica la misma excepción con `'sometimes\|required\|digits:10'`, ya que `doctors.movil` también es `NOT NULL`. |
 | `phone` (teléfono) | `'nullable\|string\|max:255'` — libre (la restricción de formato es solo frontend) |
 | `value_agreement` / `amount` (valor) | `'required\|numeric\|min:10000'` o `'nullable\|numeric\|min:10000'` según si es obligatorio |
 
@@ -139,12 +139,22 @@ una decisión deliberada**:
   `Renovation`. La mayoría siguen usando `Validator::make()` manual con retorno explícito `400`;
   `Affiliate` y `User` ya migraron a Form Requests (`StoreAffiliateRequest`, `UpdateAffiliateRequest`,
   `StoreUserRequest`, `UpdateUserRequest`) pero sobrescriben `failedValidation()` para seguir
-  devolviendo `400` y no romper el contrato existente.
+  devolviendo `400` y no romper el contrato existente. `Doctor` y `Counselor` migraron su `update()`
+  al mismo patrón (`UpdateDoctorRequest`, `UpdateCounselorRequest`, también con `failedValidation()`
+  sobrescrito) — sus `store()` siguen con `Validator::make()` manual.
 - **422 (comportamiento nativo de Laravel):** `Appointment`, `Setting`, `AffiliateNote`. Ya
   devolvían `422` antes de este retrofit (comportamiento por defecto de `$request->validate()` /
   `ValidationException` de Laravel) y tenían tráfico real desde `frontend-cm`. Cambiarlos a `400`
   para "unificar" arriesgaba romper el manejo de errores ya en producción de esos endpoints por un
   beneficio puramente cosmético — se decidió no tocarlos.
+
+**Efecto secundario de migrar `update()` a Form Request:** al ser inyectada por tipo en la firma del
+método del controlador, Laravel valida `UpdateDoctorRequest`/`UpdateCounselorRequest` durante la
+resolución de dependencias, **antes** de que el cuerpo del método llegue a `Model::find($id)`. Por
+eso, enviar un payload inválido contra un id inexistente en `PATCH /api/doctors/{id}` o
+`PATCH /api/counselors/{id}` ahora responde `400` (validación) en vez de `404` (no encontrado). Es
+un cambio de comportamiento deliberado y aceptado — arguiblemente más correcto, ya que no revela si
+el registro existe antes de validar la forma del input — no un bug a corregir.
 
 Si se crea un controlador nuevo, seguir la convención de `400` (`Validator::make()` manual o Form
 Request con `failedValidation()` sobrescrito) salvo que exista una razón de compatibilidad
@@ -251,6 +261,9 @@ Tras la revisión de arquitectura del backend, la lógica repetida entre control
 
 ### `User::isSuperAdmin(): bool`
 Punto único para verificar si el usuario autenticado es super administrador (`type === 1`). Usado en `AffiliateController`, `AffiliateNoteController`, `AgreementController`, `AppointmentController`, `DashboardController` y `SettingController`. **No volver a escribir `$user->type === 1` inline** en ningún controlador nuevo — llamar siempre a `$user->isSuperAdmin()`.
+
+### `App\Support\IdCardLookup`
+Punto único para la lógica de `checkIdCard()` — normalizar una cédula/documento (`normalize(string $idCard): string`, quita todo lo que no sea dígito) y verificar si ya existe un registro con ese valor (`exists(string $modelClass, string $idCard, ?int $ignoreId = null): bool`, excluyendo opcionalmente el propio registro al editar). `exists()` espera el valor ya normalizado — no vuelve a normalizar internamente. Usado en `AffiliateController::checkIdCard()` y `CounselorController::checkIdCard()`. Los mensajes de respuesta (texto "vacío"/"ya existe") siguen siendo distintos por controlador — solo la lógica de consulta se comparte. **No reintroducir la normalización/consulta duplicada** en un `checkIdCard()` nuevo — llamar siempre a `IdCardLookup`.
 
 ### Scopes de vigencia en `Affiliate`
 El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade` + `validity_end` usadas en distintos módulos — usarlos en vez de escribir la condición a mano:

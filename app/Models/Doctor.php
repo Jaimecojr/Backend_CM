@@ -22,24 +22,19 @@ class Doctor extends Model
         'address',
         'secretary_name',
         'value_agreement',
-        'state',
         'city_id'
     ];
 
-    // Relaciones
-    // un doctor una especialidad
     public function specialty()
     {
         return $this->belongsTo(Specialty::class);
     }
 
-    // un doctor puede tener muchas citas
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
     }
 
-    // un doctor pertenece a una ciudad
     public function city()
     {
         return $this->belongsTo(City::class);
