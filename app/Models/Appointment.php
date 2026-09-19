@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\UppercasesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Appointment extends Model
 {
-    use HasFactory;
+    use HasFactory, UppercasesAttributes;
+
+    /** Free-text attributes stored in uppercase (see UppercasesAttributes). */
+    protected array $uppercase = ['name', 'address'];
 
     protected $fillable = [
         'afi_code',

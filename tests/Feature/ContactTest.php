@@ -42,15 +42,15 @@ class ContactTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('data.name', 'Juan García')
-                 ->assertJsonPath('data.subject', 'Información sobre planes');
+                 ->assertJsonPath('data.name', 'JUAN GARCÍA')
+                 ->assertJsonPath('data.subject', 'INFORMACIÓN SOBRE PLANES');
 
         $this->assertDatabaseHas('contacts', [
-            'name'    => 'Juan García',
+            'name'    => 'JUAN GARCÍA',
             'email'   => 'juan@example.com',
             'phone'   => '3001234567',
-            'subject' => 'Información sobre planes',
-            'comment' => 'Hola, quiero información sobre los planes disponibles.',
+            'subject' => 'INFORMACIÓN SOBRE PLANES',
+            'comment' => 'HOLA, QUIERO INFORMACIÓN SOBRE LOS PLANES DISPONIBLES.',
         ]);
     }
 
@@ -127,7 +127,7 @@ class ContactTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonCount(1, 'data')
-                 ->assertJsonPath('data.0.name', 'Ana Martínez');
+                 ->assertJsonPath('data.0.name', 'ANA MARTÍNEZ');
     }
 
     public function test_show_retorna_contacto_con_ciudad(): void

@@ -21,7 +21,7 @@ class BeneficiarySyncServiceTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('beneficiaries', ['affiliate_id' => $affiliate->id, 'name' => 'Hijo Nuevo']);
+        $this->assertDatabaseHas('beneficiaries', ['affiliate_id' => $affiliate->id, 'name' => 'HIJO NUEVO']);
     }
 
     public function test_update_edita_un_beneficiario_existente(): void
@@ -38,7 +38,7 @@ class BeneficiarySyncServiceTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('beneficiaries', ['id' => $beneficiaryId, 'name' => 'Nombre Editado']);
+        $this->assertDatabaseHas('beneficiaries', ['id' => $beneficiaryId, 'name' => 'NOMBRE EDITADO']);
     }
 
     public function test_update_elimina_beneficiarios_no_incluidos_en_el_payload(): void

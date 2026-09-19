@@ -39,7 +39,7 @@ class AppointmentControllerTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('appointments', ['name' => 'Paciente Test']);
+        $this->assertDatabaseHas('appointments', ['name' => 'PACIENTE TEST']);
     }
 
     public function test_store_rechaza_datos_incompletos(): void

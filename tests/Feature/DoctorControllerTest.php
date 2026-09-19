@@ -35,7 +35,7 @@ class DoctorControllerTest extends TestCase
         $response = $this->actingAs($admin)->postJson('/api/doctors', $this->payloadValido($referencia));
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('doctors', ['name' => 'Carlos', 'lastname' => 'Ramírez']);
+        $this->assertDatabaseHas('doctors', ['name' => 'CARLOS', 'lastname' => 'RAMÍREZ']);
     }
 
     public function test_store_rechaza_movil_invalido(): void

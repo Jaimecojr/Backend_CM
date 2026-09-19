@@ -37,20 +37,20 @@ class MembershipFormPublicTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('data.name', 'Juan')
+                 ->assertJsonPath('data.name', 'JUAN')
                  ->assertJsonPath('data.id_card', '1234567890')
                  ->assertJsonPath('data.state', 0);
 
         $this->assertDatabaseHas('membership_forms', [
-            'name'    => 'Juan',
+            'name'    => 'JUAN',
             'id_card' => '1234567890',
             'phone'   => '3001234567',
             'bithdate'=> '1990-05-15',
-            'seller'  => 'Carlos Asesor',
+            'seller'  => 'CARLOS ASESOR',
             'state'   => 0,
         ]);
 
-        $this->assertDatabaseHas('membership_form_beneficiaries', ['name' => 'Ana Pérez']);
+        $this->assertDatabaseHas('membership_form_beneficiaries', ['name' => 'ANA PÉREZ']);
     }
 
     public function test_store_falla_sin_campos_requeridos(): void

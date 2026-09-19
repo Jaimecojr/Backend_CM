@@ -35,7 +35,7 @@ class AppointmentTodayTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonCount(1, 'data')
-                 ->assertJsonPath('data.0.name', 'Paciente Hoy');
+                 ->assertJsonPath('data.0.name', 'PACIENTE HOY');
     }
 
     public function test_non_admin_only_sees_own_appointments(): void

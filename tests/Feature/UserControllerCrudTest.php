@@ -84,7 +84,7 @@ class UserControllerCrudTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('users', ['id' => $franchise->id, 'name' => 'Nombre Editado']);
+        $this->assertDatabaseHas('users', ['id' => $franchise->id, 'name' => 'NOMBRE EDITADO']);
     }
 
     public function test_destroy_elimina_la_franquicia(): void

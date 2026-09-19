@@ -25,7 +25,9 @@ final class BeneficiarySyncService
         foreach ($beneficiariesRequest as $beneficiary) {
             if (!empty($beneficiary['name'])) {
                 if (!empty($beneficiary['id'])) {
-                    $affiliate->beneficiaries()->where('id', $beneficiary['id'])->update([
+                    // Updated through the model instance (not a query-builder update) so its
+                    // uppercase setters run; scoped to this affiliate, ids of others are ignored.
+                    $affiliate->beneficiaries()->find($beneficiary['id'])?->update([
                         'name' => $beneficiary['name'],
                         'id_card' => $beneficiary['id_card'] ?? '',
                         'bithdate' => current(array_filter([$beneficiary['bithdate'] ?? null])) ?: null,

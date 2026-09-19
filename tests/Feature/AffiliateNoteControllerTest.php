@@ -24,7 +24,7 @@ class AffiliateNoteControllerTest extends TestCase
         $this->assertDatabaseHas('affiliate_notes', [
             'affiliate_id' => $affiliate->id,
             'user_id' => $user->id,
-            'body' => 'Nota de seguimiento de prueba.',
+            'body' => 'NOTA DE SEGUIMIENTO DE PRUEBA.',
         ]);
     }
 

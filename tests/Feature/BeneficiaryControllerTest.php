@@ -34,7 +34,7 @@ class BeneficiaryControllerTest extends TestCase
         $response->assertStatus(201);
         $this->assertDatabaseHas('beneficiaries', [
             'affiliate_id' => $affiliate->id,
-            'name' => 'Hijo de Prueba',
+            'name' => 'HIJO DE PRUEBA',
             'id_card' => '1122334455',
         ]);
     }
@@ -96,7 +96,7 @@ class BeneficiaryControllerTest extends TestCase
         $response = $this->actingAs($admin)->getJson("/api/beneficiaries/{$beneficiary->id}");
 
         $response->assertStatus(200);
-        $response->assertJsonFragment(['name' => 'Beneficiario Dos']);
+        $response->assertJsonFragment(['name' => 'BENEFICIARIO DOS']);
     }
 
     public function test_show_retorna_404_si_no_existe(): void
@@ -125,7 +125,7 @@ class BeneficiaryControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('beneficiaries', [
             'id' => $beneficiary->id,
-            'name' => 'Nombre Editado',
+            'name' => 'NOMBRE EDITADO',
             'id_card' => '3334445556',
         ]);
     }

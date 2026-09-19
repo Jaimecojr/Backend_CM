@@ -271,6 +271,20 @@ El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade
 - **`scopeActiveExpiringToday()`** — `stade = 1` y `validity_end = hoy`. Usado por `AffiliateController::expiringToday()`.
 - **`scopeInactiveByExpiry()`** — `stade = 2` y `validity_end < hoy`. Usado por `DashboardController::stats()` (métrica `inactive_by_expiry`).
 
+### `App\Models\Concerns\UppercasesAttributes` — texto libre en mayúsculas
+Regla de negocio: los textos libres de afiliados, beneficiarios, citas, médicos, convenios, asesores, contactos, solicitudes de afiliación (y sus beneficiarios) y franquicias se **guardan en mayúsculas**, vengan del panel o de los formularios públicos del sitio web (`/api/public/affiliate-request`, `/api/public/contact`).
+
+El trait sobreescribe `setAttribute()` y convierte con `Str::upper()` los atributos listados en la propiedad `protected array $uppercase` del modelo. Vive en el modelo (no en controladores ni Form Requests) para cubrir todas las rutas de escritura de una vez. Atributos convertidos hoy:
+- `Affiliate`: `name`, `lastname`, `address`, `company` · `Beneficiary`: `name` · `Counselor`: `name`, `lastname`, `address` · `Doctor`: `name`, `lastname`, `address`, `secretary_name` · `Agreement`: `name` · `Appointment`: `name`, `address` · `MembershipForm`: `name`, `lastname`, `address`, `seller` · `MembershipFormBeneficiary`: `name` · `Contact`: `name`, `subject`, `comment` · `AffiliateNote`: `body` · `User` (franquicias): `name`, `contact`, `address`.
+
+**Reglas:**
+- **Nunca listar** `email`, `user` (login), `password`, `nit`, códigos, URLs/rutas de archivo ni nada de `settings`. En particular `wa_template_name` y `wa_appointment_template_name` deben seguir en minúscula: Meta solo acepta minúsculas, números y guion bajo en los nombres de plantilla, y en mayúscula el envío de carnets y citas dejaría de funcionar.
+- Usar `Str::upper()`/`mb_strtoupper()`, **nunca** `strtoupper()`: en PHP 8 esta última solo cambia ASCII y deja "pérez" como "PéREZ".
+- **Trampa del query builder:** `Model::where(...)->update([...])` y `$relacion->where(...)->update([...])` escriben directo a SQL y **no pasan por `setAttribute()`**, así que se saltan la regla. Para campos de texto libre hay que actualizar por instancia (`$relacion->find($id)?->update([...])`). `BeneficiarySyncService` ya lo hace así.
+- La regla solo actúa al asignar el atributo: los registros que ya existen no se reescriben (decisión de negocio) y quedan con su casing original hasta que se vuelvan a guardar. El frontend los muestra en mayúsculas por CSS.
+- Búsquedas (`LIKE`) y comparaciones no se ven afectadas: la collation es `utf8mb4_unicode_ci`, que ignora mayúsculas. Ojo con SQLite (tests): allí `=` sí distingue, por eso los tests comparan valores en PHP (`assertSame`).
+- Campo de texto libre nuevo en uno de estos modelos → añadirlo a `$uppercase` y a `tests/Feature/UppercaseNormalizationTest.php`. Modelo nuevo con texto libre → `use UppercasesAttributes;` + `$uppercase`. Los tests que crean datos con minúsculas y luego comparan deben esperar la versión en mayúsculas.
+
 ### `AuthController`
 Login y logout viven en `app/Http/Controllers/AuthController.php` (métodos `login`/`logout`), registrados en `routes/web.php` (`POST /login`, `POST /logout`). Ya no son closures inline en el archivo de rutas — la lógica de la cookie `auth_hint` (ver sección arriba) vive dentro de estos métodos.
 

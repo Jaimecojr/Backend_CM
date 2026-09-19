@@ -36,7 +36,7 @@ class AgreementControllerTest extends TestCase
         $response = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('agreements', ['name' => 'Convenio Test']);
+        $this->assertDatabaseHas('agreements', ['name' => 'CONVENIO TEST']);
     }
 
     public function test_update_requiere_super_admin(): void

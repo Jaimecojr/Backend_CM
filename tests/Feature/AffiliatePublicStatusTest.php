@@ -31,8 +31,8 @@ class AffiliatePublicStatusTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonPath('success', true)
-                 ->assertJsonPath('data.name', 'Jaime')
-                 ->assertJsonPath('data.lastname', 'Castaño')
+                 ->assertJsonPath('data.name', 'JAIME')
+                 ->assertJsonPath('data.lastname', 'CASTAÑO')
                  ->assertJsonPath('data.stade', 1)
                  ->assertJsonCount(2, 'data.beneficiaries');
 

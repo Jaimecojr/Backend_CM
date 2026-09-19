@@ -67,7 +67,7 @@ class AffiliateControllerTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('beneficiaries', ['name' => 'Hijo Test']);
+        $this->assertDatabaseHas('beneficiaries', ['name' => 'HIJO TEST']);
     }
 
     public function test_update_rechaza_movil_null_en_lugar_de_500(): void
