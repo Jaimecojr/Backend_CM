@@ -43,6 +43,10 @@ class SpecialtyController extends Controller
      */
     public function store(Request $request)
     {
+        if (!$request->user()->isSuperAdmin()) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name'  => 'required|string|max:255|unique:specialties,name',
             'state' => 'nullable|in:0,1',
@@ -90,6 +94,10 @@ class SpecialtyController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if (!$request->user()->isSuperAdmin()) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         $specialty = Specialty::find($id);
 
         if (!$specialty) {
