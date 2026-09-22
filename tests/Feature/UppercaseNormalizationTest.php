@@ -14,6 +14,7 @@ use App\Models\Counselor;
 use App\Models\Doctor;
 use App\Models\MembershipForm;
 use App\Models\MembershipFormBeneficiary;
+use App\Models\Specialty;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -93,6 +94,11 @@ class UppercaseNormalizationTest extends TestCase
             'convenios' => [
                 Agreement::class,
                 ['name' => 'convenio salud'],
+                ['name'],
+            ],
+            'especialidades' => [
+                Specialty::class,
+                ['name' => 'cardiología'],
                 ['name'],
             ],
             'citas' => [
