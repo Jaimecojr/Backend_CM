@@ -53,6 +53,28 @@ class MembershipFormPublicTest extends TestCase
         $this->assertDatabaseHas('membership_form_beneficiaries', ['name' => 'ANA PÉREZ']);
     }
 
+    public function test_store_sin_advisor_name_es_valido(): void
+    {
+        $cityId = $this->cityId();
+
+        $response = $this->postJson('/api/public/affiliate-request', [
+            'name'       => 'Laura',
+            'lastname'   => 'Ramírez',
+            'document'   => '1122334455',
+            'movil'      => '3001112233',
+            'email'      => 'laura@example.com',
+            'address'    => 'Calle 20 # 3-4',
+            'city_id'    => $cityId,
+            // advisor_name omitido a propósito: el formulario público lo muestra como opcional.
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('membership_forms', [
+            'name'   => 'LAURA',
+            'seller' => null,
+        ]);
+    }
+
     public function test_store_falla_sin_campos_requeridos(): void
     {
         $response = $this->postJson('/api/public/affiliate-request', []);

@@ -102,7 +102,7 @@ class MembershipFormController extends Controller
             'birth_date'      => 'nullable|date',
             'address'         => 'required|string|max:255',
             'city_id'         => 'required|exists:cities,id',
-            'advisor_name'    => 'required|string|max:255',
+            'advisor_name'    => 'nullable|string|max:255',
             'beneficiaries'   => 'nullable|array',
             'beneficiaries.*' => 'array',
             'beneficiaries.*.full_name' => 'required|string|max:255',
