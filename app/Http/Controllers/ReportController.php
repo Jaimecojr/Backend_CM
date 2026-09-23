@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesReportAccess;
+use App\Http\Requests\Reports\AffiliatesSummaryReportRequest;
 use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
 use App\Models\Affiliate;
 use App\Models\Counselor;
+use App\Reports\AffiliatesSummaryReport;
 use App\Reports\BalanceReport;
 use App\Reports\SalesReport;
 use Illuminate\Database\Eloquent\Builder;
@@ -155,6 +157,22 @@ class ReportController extends Controller
             'data'          => $items,
             'meta'          => $result['meta'],
             'total_balance' => $report->totalBalance($filters, $user),
+        ], 200);
+    }
+
+    public function affiliatesSummary(AffiliatesSummaryReportRequest $request, AffiliatesSummaryReport $report)
+    {
+        if ($denied = $this->reportAccessDenied()) {
+            return $denied;
+        }
+
+        $filters = $request->validated();
+
+        return response()->json([
+            'message' => 'Indicadores de afiliados obtenidos correctamente',
+            'data'    => $report->indicators($filters, auth()->user()),
+            'from'    => $filters['from'] ?? null,
+            'to'      => $filters['to'] ?? null,
         ], 200);
     }
 }

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesReportAccess;
+use App\Http\Requests\Reports\AffiliatesSummaryReportRequest;
 use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
+use App\Reports\Exports\AffiliatesSummaryReportExport;
 use App\Reports\Exports\BalanceReportExport;
 use App\Reports\Exports\SalesReportExport;
 use Carbon\Carbon;
@@ -36,5 +38,16 @@ class ReportExportController extends Controller
         $filename = 'Reporte_Cartera_' . Carbon::now()->format('d-m-Y') . '.xlsx';
 
         return Excel::download(new BalanceReportExport($request->validated(), auth()->user()), $filename);
+    }
+
+    public function affiliatesSummary(AffiliatesSummaryReportRequest $request)
+    {
+        if ($denied = $this->reportAccessDenied(message: 'No tiene permisos para exportar este reporte')) {
+            return $denied;
+        }
+
+        $filename = 'Reporte_Resumen_Afiliados_' . Carbon::now()->format('d-m-Y') . '.xlsx';
+
+        return Excel::download(new AffiliatesSummaryReportExport($request->validated(), auth()->user()), $filename);
     }
 }
