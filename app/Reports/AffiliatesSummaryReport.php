@@ -39,18 +39,19 @@ class AffiliatesSummaryReport
     {
         $today = now()->toDateString();
 
-        $titularIds = (clone $this->baseQuery($filters, $authUser))->pluck('id');
-
-        $titulares          = $titularIds->count();
+        $titulares          = (clone $this->baseQuery($filters, $authUser))->count();
         $titularesActivos   = (clone $this->baseQuery($filters, $authUser))
             ->where('validity_end', '>=', $today)->count();
         $titularesInactivos = $titulares - $titularesActivos;
 
-        $activeTitularIds = (clone $this->baseQuery($filters, $authUser))
-            ->where('validity_end', '>=', $today)->pluck('id');
-
-        $beneficiarios          = Beneficiary::whereIn('affiliate_id', $titularIds)->count();
-        $beneficiariosActivos   = Beneficiary::whereIn('affiliate_id', $activeTitularIds)->count();
+        $beneficiarios = Beneficiary::whereIn(
+            'affiliate_id',
+            (clone $this->baseQuery($filters, $authUser))->select('id')
+        )->count();
+        $beneficiariosActivos = Beneficiary::whereIn(
+            'affiliate_id',
+            (clone $this->baseQuery($filters, $authUser))->where('validity_end', '>=', $today)->select('id')
+        )->count();
         $beneficiariosInactivos = $beneficiarios - $beneficiariosActivos;
 
         return [
