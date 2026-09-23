@@ -8,12 +8,14 @@ use App\Http\Controllers\Concerns\AuthorizesReportAccess;
 use App\Http\Requests\Reports\AffiliatesSummaryReportRequest;
 use App\Http\Requests\Reports\AppointmentsReportRequest;
 use App\Http\Requests\Reports\BalanceReportRequest;
+use App\Http\Requests\Reports\NonRenewedAffiliatesReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
 use App\Models\Affiliate;
 use App\Models\Counselor;
 use App\Reports\AffiliatesSummaryReport;
 use App\Reports\AppointmentsReport;
 use App\Reports\BalanceReport;
+use App\Reports\NonRenewedAffiliatesReport;
 use App\Reports\SalesReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -198,6 +200,32 @@ class ReportController extends Controller
 
         return response()->json([
             'message' => 'Reporte de citas obtenido correctamente',
+            'data'    => $items,
+            'meta'    => $result['meta'],
+        ], 200);
+    }
+
+    public function nonRenewedAffiliates(NonRenewedAffiliatesReportRequest $request, NonRenewedAffiliatesReport $report)
+    {
+        if ($denied = $this->reportAccessDenied()) {
+            return $denied;
+        }
+
+        $user    = auth()->user();
+        $filters = $request->validated();
+        $result  = $this->paginateOrAll($report->query($filters, $user), $filters['per_page'] ?? null);
+
+        $items = $result['items']->map(fn (Affiliate $a) => [
+            'id'           => $a->id,
+            'validity_end' => $a->validity_end,
+            'name'         => trim("{$a->name} {$a->lastname}"),
+            'phone'        => $a->phone,
+            'movil'        => $a->movil,
+            'franchise'    => $a->user->name ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Reporte de clientes sin renovación obtenido correctamente',
             'data'    => $items,
             'meta'    => $result['meta'],
         ], 200);

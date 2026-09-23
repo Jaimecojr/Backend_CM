@@ -138,5 +138,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('appointments',        [ReportController::class, 'appointments']);
         Route::get('appointments/export', [ReportExportController::class, 'appointments']);
+
+        Route::get('non-renewed-affiliates',        [ReportController::class, 'nonRenewedAffiliates']);
+        Route::get('non-renewed-affiliates/export', [ReportExportController::class, 'nonRenewedAffiliates']);
     });
 });
