@@ -7,12 +7,17 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
+use App\Services\RegistActionLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
+    public function __construct(private RegistActionLogger $registActionLogger)
+    {
+    }
+
     /**
      * Display all users
      */
@@ -55,6 +60,8 @@ class UserController extends Controller
             'city_id' => $data['city_id'],
             'type' => $data['type'] ?? 2,
         ]);
+
+        $this->registActionLogger->created('users', $user->id);
 
         return response()->json([
             'message' => 'Usuario creado correctamente',
@@ -126,6 +133,12 @@ class UserController extends Controller
             $user->type = $request->type;
 
         $user->save();
+
+        if ($user->wasChanged('state')) {
+            $this->registActionLogger->statusChanged('users', $user->id);
+        } else {
+            $this->registActionLogger->updated('users', $user->id);
+        }
 
         return response()->json([
             'message' => 'Usuario actualizado correctamente',

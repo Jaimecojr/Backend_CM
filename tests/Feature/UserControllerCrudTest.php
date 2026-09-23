@@ -118,4 +118,56 @@ class UserControllerCrudTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_store_registra_regist_action_de_creacion(): void
+    {
+        $admin = User::factory()->create();
+        $cityId = User::factory()->create()->city_id;
+
+        $response = $this->actingAs($admin)->postJson('/api/users', [
+            'nit' => '7776665552',
+            'name' => 'Franquicia Auditada',
+            'email' => 'auditada@example.com',
+            'user' => 'franquiciaauditada',
+            'password' => 'secret123',
+            'city_id' => $cityId,
+        ]);
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'I',
+            'target_table' => 'users',
+            'table_id'     => $id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_update_de_state_registra_action_type_e(): void
+    {
+        $admin = User::factory()->create();
+        $franquicia = User::factory()->create(['state' => 1]);
+
+        $this->actingAs($admin)->patchJson("/api/users/{$franquicia->id}", ['state' => 2]);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'E',
+            'target_table' => 'users',
+            'table_id'     => $franquicia->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_update_sin_cambiar_state_registra_action_type_u(): void
+    {
+        $admin = User::factory()->create();
+        $franquicia = User::factory()->create(['state' => 1, 'phone' => '6041110000']);
+
+        $this->actingAs($admin)->patchJson("/api/users/{$franquicia->id}", ['phone' => '6042223333']);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'U',
+            'target_table' => 'users',
+            'table_id'     => $franquicia->id,
+        ]);
+    }
 }
