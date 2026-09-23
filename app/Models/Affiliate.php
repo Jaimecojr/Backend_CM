@@ -85,6 +85,14 @@ class Affiliate extends Model
         return $this->hasMany(Renovation::class);
     }
 
+    // The single most recent renovation (highest id), or null if the
+    // affiliate has never renewed. Used by the sales report to classify
+    // a row as "Nuevo" vs "Renovación" without a correlated subquery.
+    public function latestRenovation()
+    {
+        return $this->hasOne(Renovation::class)->ofMany('id', 'max');
+    }
+
     // Relationship: an affiliate has many notes/observations
     public function notes()
     {
