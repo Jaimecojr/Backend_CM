@@ -22,6 +22,7 @@ use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContentAllyController;
 use App\Http\Controllers\ContentSpecialistController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -120,4 +121,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Administración de contenido — Especialistas de la salud
     Route::put('content-specialists/reorder', [ContentSpecialistController::class, 'reorder']);
     Route::apiResource('content-specialists', ContentSpecialistController::class)->except(['show']);
+
+    // Reportes
+    Route::prefix('reports')->group(function () {
+        Route::get('catalogs/counselors', [ReportController::class, 'counselorsCatalog']);
+    });
 });
