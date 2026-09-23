@@ -38,6 +38,17 @@ class BalanceReportTest extends TestCase
                  ->assertJsonCount(1, 'data');
     }
 
+    public function test_afiliado_con_asesor_inactivo_no_aparece_en_el_reporte(): void
+    {
+        $admin     = User::factory()->create(['type' => 1]);
+        $counselor = Counselor::factory()->create(['state' => 2]);
+        Affiliate::factory()->create(['balance' => 40000, 'counselor_id' => $counselor->id]);
+
+        $response = $this->actingAs($admin)->getJson('/api/reports/balance');
+
+        $response->assertStatus(200)->assertJsonCount(0, 'data');
+    }
+
     public function test_franquicia_no_ve_cartera_de_otra_franquicia_aunque_envie_su_id(): void
     {
         $franchiseA = User::factory()->create(['type' => 2]);

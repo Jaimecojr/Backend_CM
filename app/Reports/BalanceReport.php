@@ -13,6 +13,13 @@ class BalanceReport
 {
     use AppliesFranchiseScope;
 
+    /**
+     * Mirrors the legacy system's report, which was an inner join requiring
+     * cou_stade = 1 — intentional, not a bug. An affiliate's outstanding
+     * balance stops appearing in this report the moment their counselor is
+     * deactivated, even though the affiliate itself is still active and
+     * still owes the balance.
+     */
     public function query(array $filters, User $authUser): Builder
     {
         $query = Affiliate::query()
