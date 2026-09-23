@@ -88,6 +88,21 @@ class DoctorControllerTest extends TestCase
         $this->assertDatabaseMissing('doctors', ['id' => $doctor->id]);
     }
 
+    public function test_destroy_registra_regist_action_de_borrado(): void
+    {
+        $admin = User::factory()->create();
+        $doctor = Doctor::factory()->create();
+
+        $this->actingAs($admin)->deleteJson("/api/doctors/{$doctor->id}");
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'D',
+            'target_table' => 'doctors',
+            'table_id'     => $doctor->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
     public function test_index_lista_medicos(): void
     {
         $admin = User::factory()->create();

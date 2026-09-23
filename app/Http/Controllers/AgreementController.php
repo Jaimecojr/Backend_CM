@@ -161,6 +161,8 @@ class AgreementController extends Controller
 
         $agreement->delete();
 
+        $this->registActionLogger->deleted('agreements', $agreement->id);
+
         return response()->json([
             'message' => 'Convenio eliminado correctamente',
         ], 200);

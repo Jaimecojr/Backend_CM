@@ -63,6 +63,23 @@ class AgreementControllerTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_destroy_registra_regist_action_de_borrado(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $created = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $asesor = User::factory()->create(['type' => 3]);
+        $this->actingAs($asesor)->deleteJson("/api/agreements/{$id}");
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'D',
+            'target_table' => 'agreements',
+            'table_id'     => $id,
+            'user_id'      => $asesor->id,
+        ]);
+    }
+
     public function test_active_agreements_retorna_solo_activos(): void
     {
         $admin = User::factory()->create(['type' => 1]);

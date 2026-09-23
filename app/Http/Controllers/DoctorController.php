@@ -264,6 +264,8 @@ class DoctorController extends Controller
 
         $doctor->delete();
 
+        $this->registActionLogger->deleted('doctors', $doctor->id);
+
         return response()->json([
             'message' => 'Médico eliminado correctamente',
         ], 200);

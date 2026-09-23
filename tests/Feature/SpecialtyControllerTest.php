@@ -65,6 +65,21 @@ class SpecialtyControllerTest extends TestCase
         $this->assertDatabaseMissing('specialties', ['id' => $specialty->id]);
     }
 
+    public function test_destroy_registra_regist_action_de_borrado(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $specialty = Specialty::create(['name' => 'Nefrología', 'state' => 1]);
+
+        $this->actingAs($admin)->deleteJson("/api/specialties/{$specialty->id}");
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'D',
+            'target_table' => 'specialties',
+            'table_id'     => $specialty->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
     public function test_store_registra_regist_action_de_creacion(): void
     {
         $admin = User::factory()->create(['type' => 1]);

@@ -193,6 +193,8 @@ class CounselorController extends Controller
 
         $counselor->delete();
 
+        $this->registActionLogger->deleted('counselors', $counselor->id);
+
         return response()->json([
             'message' => 'Vendedor eliminado correctamente',
         ], 200);

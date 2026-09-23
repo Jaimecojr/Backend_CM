@@ -56,6 +56,21 @@ class RegistActionLoggerTest extends TestCase
         ]);
     }
 
+    public function test_deleted_guarda_action_type_d(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        (new RegistActionLogger())->deleted('counselors', 9);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'D',
+            'target_table' => 'counselors',
+            'table_id'     => 9,
+            'user_id'      => $user->id,
+        ]);
+    }
+
     public function test_sin_usuario_autenticado_guarda_user_id_null(): void
     {
         (new RegistActionLogger())->created('doctors', 1);

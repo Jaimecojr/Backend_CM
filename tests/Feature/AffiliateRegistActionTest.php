@@ -18,7 +18,7 @@ class AffiliateRegistActionTest extends TestCase
 
         // Mismo payload que test_store_crea_afiliado_con_datos_validos en
         // AffiliateControllerTest — un store() válido y completo.
-        $this->actingAs($admin)->postJson('/api/affiliates', [
+        $response = $this->actingAs($admin)->postJson('/api/affiliates', [
             'counselor_id'       => $referencia->counselor_id,
             'name'               => 'Nuevo',
             'lastname'           => 'Afiliado',
@@ -38,6 +38,9 @@ class AffiliateRegistActionTest extends TestCase
             'movil'              => '3001234567',
         ]);
 
+        // El store() en sí debe tener éxito — si no, "0 filas en regist_actions"
+        // sería trivialmente cierto sin probar nada sobre la auditoría.
+        $response->assertStatus(201);
         $this->assertDatabaseCount('regist_actions', 0);
     }
 
@@ -61,8 +64,9 @@ class AffiliateRegistActionTest extends TestCase
         $admin = User::factory()->create(['type' => 1]);
         $affiliate = Affiliate::factory()->create(['stade' => 1]);
 
-        $this->actingAs($admin)->patchJson("/api/affiliates/{$affiliate->id}", ['name' => 'Nombre Editado']);
+        $response = $this->actingAs($admin)->patchJson("/api/affiliates/{$affiliate->id}", ['name' => 'Nombre Editado']);
 
+        $response->assertStatus(200);
         $this->assertDatabaseCount('regist_actions', 0);
     }
 
@@ -74,8 +78,9 @@ class AffiliateRegistActionTest extends TestCase
         // El controlador descarta `stade` del payload para roles no super admin
         // (ver AffiliateController::update), así que el valor no cambia y
         // wasChanged('stade') es false — no hay nada que auditar.
-        $this->actingAs($asesor)->patchJson("/api/affiliates/{$affiliate->id}", ['stade' => 2]);
+        $response = $this->actingAs($asesor)->patchJson("/api/affiliates/{$affiliate->id}", ['stade' => 2]);
 
+        $response->assertStatus(200);
         $this->assertDatabaseCount('regist_actions', 0);
     }
 
@@ -96,7 +101,7 @@ class AffiliateRegistActionTest extends TestCase
         $admin = User::factory()->create(['type' => 1]);
         $affiliate = Affiliate::factory()->create(['stade' => 2]);
 
-        $this->actingAs($admin)->postJson('/api/renovations', [
+        $response = $this->actingAs($admin)->postJson('/api/renovations', [
             'affiliate_id' => $affiliate->id,
             'date_ini'     => now()->toDateString(),
             'date_end'     => now()->addYear()->toDateString(),
@@ -104,6 +109,7 @@ class AffiliateRegistActionTest extends TestCase
             'value'        => 100000,
         ]);
 
+        $response->assertStatus(201);
         $this->assertDatabaseCount('regist_actions', 0);
     }
 }

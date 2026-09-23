@@ -157,6 +157,8 @@ class SpecialtyController extends Controller
 
         $specialty->delete();
 
+        $this->registActionLogger->deleted('specialties', $specialty->id);
+
         return response()->json([
             'message' => 'Especialidad eliminada correctamente',
         ], 200);

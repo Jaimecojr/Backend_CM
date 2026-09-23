@@ -23,6 +23,11 @@ class RegistActionLogger
         $this->log('E', $table, $id);
     }
 
+    public function deleted(string $table, int $id): void
+    {
+        $this->log('D', $table, $id);
+    }
+
     private function log(string $actionType, string $table, int $id): void
     {
         RegistAction::create([

@@ -77,6 +77,22 @@ class CounselorControllerTest extends TestCase
         $this->assertDatabaseMissing('counselors', ['id' => $id]);
     }
 
+    public function test_destroy_registra_regist_action_de_borrado(): void
+    {
+        $admin = User::factory()->create();
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $this->actingAs($admin)->deleteJson("/api/counselors/{$id}");
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'D',
+            'target_table' => 'counselors',
+            'table_id'     => $id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
     public function test_active_counselors_y_check_id_card(): void
     {
         $admin = User::factory()->create();

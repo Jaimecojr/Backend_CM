@@ -98,6 +98,21 @@ class UserControllerCrudTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $franchise->id]);
     }
 
+    public function test_destroy_registra_regist_action_de_borrado(): void
+    {
+        $admin = User::factory()->create();
+        $franchise = User::factory()->create();
+
+        $this->actingAs($admin)->deleteJson("/api/users/{$franchise->id}");
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'D',
+            'target_table' => 'users',
+            'table_id'     => $franchise->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
     public function test_index_lista_franquicias(): void
     {
         $admin = User::factory()->create();

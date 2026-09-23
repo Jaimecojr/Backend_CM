@@ -161,6 +161,8 @@ class UserController extends Controller
 
         $user->delete();
 
+        $this->registActionLogger->deleted('users', $user->id);
+
         return response()->json([
             'message' => 'Usuario eliminado correctamente',
         ], 200);

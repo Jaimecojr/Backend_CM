@@ -271,6 +271,18 @@ El modelo `Affiliate` expone 3 scopes que encapsulan las combinaciones de `stade
 - **`scopeActiveExpiringToday()`** — `stade = 1` y `validity_end = hoy`. Usado por `AffiliateController::expiringToday()`.
 - **`scopeInactiveByExpiry()`** — `stade = 2` y `validity_end < hoy`. Usado por `DashboardController::stats()` (métrica `inactive_by_expiry`).
 
+### `App\Services\RegistActionLogger` — auditoría en `regist_actions`
+Único punto de escritura en la tabla `regist_actions` (existía en la base de datos real con filas del sistema anterior — `action_type` `'I'`/`'U'` para franquicias, médicos y especialidades — pero nunca se implementó en este backend hasta ahora). Se inyecta por constructor (`private RegistActionLogger $registActionLogger`) en `DoctorController`, `SpecialtyController`, `UserController` (franquicias), `CounselorController`, `AgreementController` y `AffiliateController`.
+- **`created(string $table, int $id): void`** → `action_type = 'I'`. Se llama justo después de `store()`.
+- **`updated(string $table, int $id): void`** → `action_type = 'U'`. Cambio de un campo que no es el de estado.
+- **`statusChanged(string $table, int $id): void`** → `action_type = 'E'` (Estado — valor nuevo, no viene del sistema legado). Se llama cuando `$model->wasChanged('state')` (o `stade` en afiliados) tras persistir.
+- **`deleted(string $table, int $id): void`** → `action_type = 'D'`. Se llama justo después de `delete()` en `destroy()`.
+- `user_id` siempre viene de `auth()->id()` — ningún controlador debe aceptar ni pasar un `user_id` de auditoría desde el request.
+- **Regla de prioridad:** si en un mismo `update()` cambia el campo de estado junto con otros campos, se loguea solo `'E'` (una fila), nunca `'E'` + `'U'` duplicado.
+- **Caso especial `AffiliateController`:** es el único de los seis que **no** llama a `created()` ni `deleted()` — solo `statusChanged()` en `update()`, y solo cuando `stade` cambió de verdad. No hay gate de rol en la condición de logueo (la restricción de quién *puede* enviar `stade` sigue en `update()`, sin tocar) — así la auditoría no queda atada a un rol que puede cambiar más adelante.
+- **Decisión pendiente, no un bug:** la reactivación automática de `stade` al renovar (`RenovationController::store()`, vía query builder directo) **no** genera fila de auditoría, incluso cuando el frontend también manda `stade = 1` en el PATCH previo del flujo de edición manual — ese PATCH sí queda auditado. El mismo evento de negocio (reactivar por renovación) queda auditado o no según qué endpoint lo dispare. Es una asimetría conocida, no corregida en el spec original (`docs/superpowers/specs/2026-09-22-audit-log-regist-actions-design.md`) — antes de "arreglarla" confirmar con el equipo de producto si se quiere auditar toda renovación (alto volumen, diluye la señal de "quién activó/desactivó manualmente") o dejarlo así.
+- **No reintroducir `RegistAction::create()` inline** en un controlador nuevo — llamar siempre a `RegistActionLogger`.
+
 ### `App\Models\Concerns\UppercasesAttributes` — texto libre en mayúsculas
 Regla de negocio: los textos libres de afiliados, beneficiarios, citas, médicos, convenios, asesores, contactos, solicitudes de afiliación (y sus beneficiarios) y franquicias se **guardan en mayúsculas**, vengan del panel o de los formularios públicos del sitio web (`/api/public/affiliate-request`, `/api/public/contact`).
 
