@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesReportAccess;
+use App\Http\Requests\Reports\SalesReportRequest;
+use App\Models\Affiliate;
 use App\Models\Counselor;
+use App\Reports\SalesReport;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
+    use AuthorizesReportAccess;
+
     /**
      * Scoped, active-only counselor catalog for the report filters
      * (select in report 2, autocomplete in report 1).
@@ -47,5 +54,79 @@ class ReportController extends Controller
             'message' => 'Asesores obtenidos correctamente',
             'data' => $counselors,
         ], 200);
+    }
+
+    /**
+     * Applies pagination, or returns every row when $perPage === 'all',
+     * in the {message,data,meta} shape used across the project.
+     *
+     * @return array{items: \Illuminate\Support\Collection, meta: array}
+     */
+    private function paginateOrAll(Builder $query, ?string $perPage, int $default = 25): array
+    {
+        if ($perPage === 'all') {
+            $all = $query->get();
+
+            return [
+                'items' => $all,
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page'    => 1,
+                    'per_page'     => $all->count(),
+                    'total'        => $all->count(),
+                ],
+            ];
+        }
+
+        $paginated = $query->paginate((int) ($perPage ?? $default));
+
+        return [
+            'items' => collect($paginated->items()),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+            ],
+        ];
+    }
+
+    public function sales(SalesReportRequest $request, SalesReport $report)
+    {
+        if ($denied = $this->reportAccessDenied()) {
+            return $denied;
+        }
+
+        $user    = auth()->user();
+        $filters = $request->validated();
+        $result  = $this->paginateOrAll($report->query($filters, $user), $filters['per_page'] ?? null);
+
+        $items = $result['items']->map(fn (Affiliate $affiliate) => $this->mapSaleRow($affiliate));
+
+        return response()->json([
+            'message' => 'Reporte de ventas obtenido correctamente',
+            'data'    => $items,
+            'meta'    => $result['meta'],
+            'totals'  => $report->totals($filters, $user),
+        ], 200);
+    }
+
+    private function mapSaleRow(Affiliate $affiliate): array
+    {
+        $renovation = $affiliate->latestRenovation;
+        $isRenewal  = $renovation !== null;
+
+        return [
+            'id'           => $affiliate->id,
+            'payment_date' => $affiliate->payment_date,
+            'fecha_desde'  => $isRenewal ? $renovation->date_ini : $affiliate->validity,
+            'validity_end' => $affiliate->validity_end,
+            'validity'     => $affiliate->validity,
+            'counselor'    => $affiliate->counselor ? trim("{$affiliate->counselor->name} {$affiliate->counselor->lastname}") : null,
+            'name'         => trim("{$affiliate->name} {$affiliate->lastname}"),
+            'franchise'    => $affiliate->user->name ?? null,
+            'tipo_venta'   => $isRenewal ? 'Renovación' : 'Nuevo',
+            'valor_venta'  => $isRenewal ? $renovation->value : $affiliate->value,
+        ];
     }
 }

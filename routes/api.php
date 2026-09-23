@@ -23,6 +23,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContentAllyController;
 use App\Http\Controllers\ContentSpecialistController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportExportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -125,5 +126,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Reportes
     Route::prefix('reports')->group(function () {
         Route::get('catalogs/counselors', [ReportController::class, 'counselorsCatalog']);
+
+        Route::get('sales',        [ReportController::class, 'sales']);
+        Route::get('sales/export', [ReportExportController::class, 'sales']);
     });
 });
