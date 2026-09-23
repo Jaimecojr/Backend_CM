@@ -10,10 +10,12 @@ use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithDrawings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\BaseDrawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class AffiliatesSummaryReportExport implements FromArray, WithHeadings, ShouldAutoSize, WithDrawings
+class AffiliatesSummaryReportExport implements FromArray, WithHeadings, ShouldAutoSize, WithDrawings, WithStyles
 {
     public function __construct(private array $filters, private User $authUser)
     {
@@ -47,5 +49,12 @@ class AffiliatesSummaryReportExport implements FromArray, WithHeadings, ShouldAu
         $drawing->setCoordinates('A1');
 
         return $drawing;
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

@@ -12,10 +12,12 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithDrawings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\BaseDrawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class AppointmentsReportExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithDrawings
+class AppointmentsReportExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithDrawings, WithStyles
 {
     public function __construct(private array $filters, private User $authUser)
     {
@@ -50,5 +52,12 @@ class AppointmentsReportExport implements FromCollection, WithHeadings, WithMapp
         $drawing->setCoordinates('A1');
 
         return $drawing;
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }
