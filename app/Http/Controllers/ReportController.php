@@ -10,6 +10,7 @@ use App\Http\Requests\Reports\AppointmentsReportRequest;
 use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\NonRenewedAffiliatesReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
+use App\Http\Requests\Reports\UnsentCarnetsReportRequest;
 use App\Models\Affiliate;
 use App\Models\Counselor;
 use App\Reports\AffiliatesSummaryReport;
@@ -17,6 +18,7 @@ use App\Reports\AppointmentsReport;
 use App\Reports\BalanceReport;
 use App\Reports\NonRenewedAffiliatesReport;
 use App\Reports\SalesReport;
+use App\Reports\UnsentCarnetsReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -228,6 +230,46 @@ class ReportController extends Controller
             'message' => 'Reporte de clientes sin renovación obtenido correctamente',
             'data'    => $items,
             'meta'    => $result['meta'],
+        ], 200);
+    }
+
+    /**
+     * Super-admin only. Pagination here is manual over an in-memory
+     * Collection (not Eloquent's ->paginate()) because "is this a failed
+     * send" requires PHP-level JSON parsing of the response column, which
+     * isn't portable in raw SQL across SQLite (tests) and MySQL (prod).
+     */
+    public function unsentCarnets(UnsentCarnetsReportRequest $request, UnsentCarnetsReport $report)
+    {
+        if ($denied = $this->reportAccessDenied(franchiseAllowed: false)) {
+            return $denied;
+        }
+
+        $user    = auth()->user();
+        $filters = $request->validated();
+        $failed  = $report->failed($filters, $user);
+
+        $rawPerPage = $filters['per_page'] ?? '25';
+        $perPage    = $rawPerPage === 'all' ? max($failed->count(), 1) : (int) $rawPerPage;
+        $page       = $rawPerPage === 'all' ? 1 : max(1, (int) $request->query('page', 1));
+
+        $items = $failed->forPage($page, $perPage)->map(fn ($m) => [
+            'date'      => substr((string) $m->created_at, 0, 10),
+            'name'      => trim("{$m->affiliate_name} {$m->affiliate_lastname}"),
+            'phone'     => $m->affiliate_phone,
+            'movil'     => $m->affiliate_movil,
+            'franchise' => $m->franchise_name,
+        ])->values();
+
+        return response()->json([
+            'message' => 'Reporte de carnets no enviados obtenido correctamente',
+            'data'    => $items,
+            'meta'    => [
+                'current_page' => $page,
+                'last_page'    => $rawPerPage === 'all' ? 1 : (int) max(1, ceil($failed->count() / $perPage)),
+                'per_page'     => $rawPerPage === 'all' ? $failed->count() : $perPage,
+                'total'        => $failed->count(),
+            ],
         ], 200);
     }
 }

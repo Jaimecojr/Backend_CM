@@ -10,11 +10,13 @@ use App\Http\Requests\Reports\AppointmentsReportRequest;
 use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\NonRenewedAffiliatesReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
+use App\Http\Requests\Reports\UnsentCarnetsReportRequest;
 use App\Reports\Exports\AffiliatesSummaryReportExport;
 use App\Reports\Exports\AppointmentsReportExport;
 use App\Reports\Exports\BalanceReportExport;
 use App\Reports\Exports\NonRenewedAffiliatesReportExport;
 use App\Reports\Exports\SalesReportExport;
+use App\Reports\Exports\UnsentCarnetsReportExport;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -75,5 +77,16 @@ class ReportExportController extends Controller
         $filename = 'Reporte_Sin_Renovacion_' . Carbon::now()->format('d-m-Y') . '.xlsx';
 
         return Excel::download(new NonRenewedAffiliatesReportExport($request->validated(), auth()->user()), $filename);
+    }
+
+    public function unsentCarnets(UnsentCarnetsReportRequest $request)
+    {
+        if ($denied = $this->reportAccessDenied(franchiseAllowed: false, message: 'No tiene permisos para exportar este reporte')) {
+            return $denied;
+        }
+
+        $filename = 'Reporte_Carnets_No_Enviados_' . Carbon::now()->format('d-m-Y') . '.xlsx';
+
+        return Excel::download(new UnsentCarnetsReportExport($request->validated(), auth()->user()), $filename);
     }
 }

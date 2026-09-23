@@ -141,5 +141,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('non-renewed-affiliates',        [ReportController::class, 'nonRenewedAffiliates']);
         Route::get('non-renewed-affiliates/export', [ReportExportController::class, 'nonRenewedAffiliates']);
+
+        Route::get('unsent-carnets',        [ReportController::class, 'unsentCarnets']);
+        Route::get('unsent-carnets/export', [ReportExportController::class, 'unsentCarnets']);
     });
 });
