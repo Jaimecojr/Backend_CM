@@ -135,5 +135,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('affiliates-summary',        [ReportController::class, 'affiliatesSummary']);
         Route::get('affiliates-summary/export', [ReportExportController::class, 'affiliatesSummary']);
+
+        Route::get('appointments',        [ReportController::class, 'appointments']);
+        Route::get('appointments/export', [ReportExportController::class, 'appointments']);
     });
 });

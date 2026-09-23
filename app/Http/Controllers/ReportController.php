@@ -6,11 +6,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesReportAccess;
 use App\Http\Requests\Reports\AffiliatesSummaryReportRequest;
+use App\Http\Requests\Reports\AppointmentsReportRequest;
 use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
 use App\Models\Affiliate;
 use App\Models\Counselor;
 use App\Reports\AffiliatesSummaryReport;
+use App\Reports\AppointmentsReport;
 use App\Reports\BalanceReport;
 use App\Reports\SalesReport;
 use Illuminate\Database\Eloquent\Builder;
@@ -173,6 +175,31 @@ class ReportController extends Controller
             'data'    => $report->indicators($filters, auth()->user()),
             'from'    => $filters['from'] ?? null,
             'to'      => $filters['to'] ?? null,
+        ], 200);
+    }
+
+    public function appointments(AppointmentsReportRequest $request, AppointmentsReport $report)
+    {
+        if ($denied = $this->reportAccessDenied()) {
+            return $denied;
+        }
+
+        $user    = auth()->user();
+        $filters = $request->validated();
+        $result  = $this->paginateOrAll($report->query($filters, $user), $filters['per_page'] ?? null);
+
+        $items = $result['items']->map(fn ($appointment) => [
+            'id'     => $appointment->id,
+            'name'   => AppointmentsReport::patientName($appointment),
+            'doctor' => $appointment->doctor ? trim("{$appointment->doctor->name} {$appointment->doctor->lastname}") : null,
+            'city'   => $appointment->doctor?->city?->name,
+            'date'   => $appointment->date,
+        ]);
+
+        return response()->json([
+            'message' => 'Reporte de citas obtenido correctamente',
+            'data'    => $items,
+            'meta'    => $result['meta'],
         ], 200);
     }
 }
