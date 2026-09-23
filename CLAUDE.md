@@ -431,6 +431,67 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
 - `index()`: paginado, búsqueda por `name`/`email` (LIKE), carga `city:id,name`, orden `id desc`.
 - `destroy($id)`: hard delete físico. Sin soft-delete ni campo de estado.
 
+## Módulo de Reportes
+
+El módulo de reportes proporciona 6 reportes paginados de análisis de datos, cada uno con un endpoint de listado y un endpoint `/export` para descargar en Excel.
+
+### Rutas y Controladores
+Todos los reportes se acceden bajo el prefijo `GET /api/reports/`:
+- **Ventas** (`/sales`, `/sales/export`) → `ReportController@sales()` + `ReportExportController@sales()`
+- **Cartera** (`/balance`, `/balance/export`) → `ReportController@balance()` + `ReportExportController@balance()`
+- **Resumen de Afiliados** (`/affiliates-summary`, `/affiliates-summary/export`) → `ReportController@affiliatesSummary()` + `ReportExportController@affiliatesSummary()`
+- **Citas** (`/appointments`, `/appointments/export`) → `ReportController@appointments()` + `ReportExportController@appointments()`
+- **Sin Renovación** (`/non-renewed-affiliates`, `/non-renewed-affiliates/export`) → `ReportController@nonRenewedAffiliates()` + `ReportExportController@nonRenewedAffiliates()`
+- **Carnets No Enviados** (`/unsent-carnets`, `/unsent-carnets/export`) → `ReportController@unsentCarnets()` + `ReportExportController@unsentCarnets()` (solo super admin)
+
+Todos requieren autenticación (`auth:sanctum`). Las rutas públicas están explícitamente prohibidas.
+
+### Arquitectura Compartida: `App\Reports\*Report::query()`
+Cada reporte implementa una clase `*Report` en `app/Reports/` (ej. `SalesReport`, `BalanceReport`, etc.) con un método estático `query()` que retorna el `Builder` de Eloquent como **punto único de verdad** para la lógica de filtrado, búsqueda y join. Este builder es compartido por:
+1. `ReportController::action()` — paginación para el listado
+2. `ReportController::totals()` — cálculo de totales (suma, conteos, promedios) del mismo builder
+3. `ReportExportController::action()` — exportación completa a Excel
+
+No duplicar filtros/joins entre controladores — todo debe vivir en `*Report::query()`.
+
+### Trait `AppliesFranchiseScope`
+**Comportamiento:** Filtra resultados según el rol del usuario autenticado.
+- Si `user->type === 1` (super admin): sin filtro, ve todos los registros.
+- Si `user->type !== 1` (asesor/franquicia): filtra por `user_id` del usuario autenticado.
+
+**Usado por 5 reportes:**
+- `SalesReport`
+- `BalanceReport`
+- `AffiliatesSummaryReport`
+- `AppointmentsReport`
+- `NonRenewedAffiliatesReport`
+
+**No usado por:**
+- `UnsentCarnetsReport` — requiere super admin y no filtra por `user_id`
+
+### Trait `AuthorizesReportAccess`
+**Comportamiento:** Lógica centralizada de autorización (403) compartida entre `ReportController` y `ReportExportController`.
+- Verifica que el usuario sea super admin para `UnsentCarnets`.
+- Verifica que el usuario sea super admin para acceder a datos de otros usuarios (si el reporte usa `AppliesFranchiseScope`).
+- Permite al usuario ver sus propios datos sin restricción.
+
+**Implementado en:**
+- `app/Http/Traits/AuthorizesReportAccess.php` — método `authorizeReportAccess()` usado en ambos controladores.
+
+### Decisiones de Negocio
+
+**Sin Renovación (Report 5):**
+Ignora deliberadamente el campo `stade` — lista **todos** los afiliados (activos e inactivos) que no tienen una renovación registrada en los últimos 12 meses. Esta decisión permite detectar tanto afiliados vencidos que podrían renovarse como potenciales pérdidas de clientes. Ver `docs/superpowers/specs/2026-09-22-reports-module-design.md` para el rationale completo.
+
+**Carnets No Enviados (Report 6):**
+- Determina el estado "no enviado" analizando el campo `response` de la tabla `whatsapp_messages` (JSON cacheado desde Meta), nunca el campo `deleted`.
+- Es **super-admin only** — no filtra por `user_id`.
+- Estructura: agrupa por afiliado y muestra el estado del último intento (`response`), con timestamps de intentos previos.
+
+### Referencia
+Para el diseño completo del módulo (rationale de filtros, scopes, Excel, totales, y decisiones de negocio), ver:
+- `docs/superpowers/specs/2026-09-22-reports-module-design.md`
+
 ## Testing
 
 - **Convención de ubicación:** `tests/Unit/` (lógica pura, sin framework) y `tests/Feature/`
