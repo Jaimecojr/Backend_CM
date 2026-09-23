@@ -64,11 +64,13 @@ class AppointmentsReport
      */
     public static function patientName(object $appointment): string
     {
-        $name = $appointment->aff_name !== null
+        $isTitular = $appointment->type === 1;
+
+        $name = $isTitular
             ? trim("{$appointment->aff_name} {$appointment->aff_lastname}")
             : (string) $appointment->ben_name;
 
-        $suffix = $appointment->type === 1 ? ' (Titular)' : ' (Beneficiario)';
+        $suffix = $isTitular ? ' (Titular)' : ' (Beneficiario)';
 
         return $name . $suffix;
     }
