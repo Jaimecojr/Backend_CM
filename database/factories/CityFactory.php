@@ -13,14 +13,14 @@ class CityFactory extends Factory
     public function definition(): array
     {
         $departmentId = DB::table('departments')->insertGetId([
-            'name'       => fake()->unique()->state(),
+            'name'       => fake()->state(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         return [
             'department_id' => $departmentId,
-            'name'          => fake()->unique()->city(),
+            'name'          => fake()->city(),
         ];
     }
 }
