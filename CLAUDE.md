@@ -482,15 +482,16 @@ Ignora deliberadamente el campo `stade` — la condición es únicamente `validi
 **Carnets No Enviados (Report 6) — `UnsentCarnetsReport`:**
 - Determina el estado "no enviado" analizando el campo `response` de `whatsapp_messages` (JSON cacheado desde Meta: falta `messages[0].id` ⇒ falló), nunca el campo `deleted`.
 - Es **super-admin only** (`franchiseAllowed: false` en `AuthorizesReportAccess`).
+- **Sin filtro de fecha, a propósito:** es una lista viva de "lo que sigue sin resolverse", no un log histórico. Un carnet sale de la lista en cuanto se envía con éxito (ver `failed()`), así que acotarlo a un rango de fechas ocultaría fallas viejas sin ganar nada a cambio. Solo admite `franchise_id` (opcional) y `per_page` como filtros. Decisión confirmada con el dueño del producto — ver el docblock de `candidates()`.
 - **Sin agrupar:** `failed()` retorna una fila por cada mensaje fallido — no agrupa por afiliado ni resume "último intento".
 - El match afiliado↔mensaje se hace despojando el prefijo `'57'` del `recipient_id` y comparándolo contra `affiliates.movil` (ver docblock de `candidates()`).
-- Ventas (Report 1) y este reporte comparten la particularidad de aceptar un parámetro `$authUser` que hoy no se usa dentro de `candidates()`/`failed()` (el 403 ya se resolvió antes, en el controlador) — se deja por simetría con la firma del resto de reportes.
+- Este reporte tiene la particularidad de aceptar un parámetro `$authUser` que hoy no se usa dentro de `candidates()`/`failed()` (el 403 ya se resolvió antes, en el controlador) — se deja por simetría con la firma del resto de reportes.
 
 **Cartera (Report 2) — `BalanceReport`:**
 Requiere `whereHas('counselor', fn ($q) => $q->where('state', 1))` — un afiliado con saldo pendiente deja de aparecer si su asesor fue desactivado. Es intencional (replica el reporte del sistema anterior), no un bug.
 
 ### Índices relevantes
-Migración consolidada `2026_09_23_000000_add_reports_module_indexes.php`: `affiliates.payment_date` (filtro/orden principal de Ventas) y `whatsapp_messages.created_at` (filtro de rango de Carnets No Enviados).
+Migración consolidada `2026_09_23_000000_add_reports_module_indexes.php`: `affiliates.payment_date` (filtro/orden principal de Ventas) y `whatsapp_messages.created_at` (orden de Carnets No Enviados — ya no filtra por fecha, ver Decisiones de Negocio).
 
 ### Referencia
 Para el diseño completo del módulo (rationale de filtros, scopes, Excel, totales, y decisiones de negocio), ver:

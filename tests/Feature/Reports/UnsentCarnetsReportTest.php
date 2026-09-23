@@ -77,20 +77,18 @@ class UnsentCarnetsReportTest extends TestCase
         $response->assertStatus(200)->assertJsonCount(0, 'data');
     }
 
-    public function test_rango_por_defecto_solo_incluye_el_mes_actual(): void
+    public function test_incluye_mensajes_de_meses_anteriores(): void
     {
+        // This report is a live "still unresolved" list, not a historical
+        // log scoped to a month — a failure from any point in the past
+        // must appear until the carnet actually sends successfully.
         $admin = User::factory()->create(['type' => 1]);
         Affiliate::factory()->create(['movil' => '3004445566']);
 
         WhatsappMessage::factory()->failed()->create([
             'recipient_id' => '573004445566',
             'type'         => 'carnet',
-            'created_at'   => Carbon::now(),
-        ]);
-        WhatsappMessage::factory()->failed()->create([
-            'recipient_id' => '573004445566',
-            'type'         => 'carnet',
-            'created_at'   => Carbon::now()->subMonth(),
+            'created_at'   => Carbon::now()->subYear(),
         ]);
 
         $response = $this->actingAs($admin)->getJson('/api/reports/unsent-carnets');
