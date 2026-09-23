@@ -12,8 +12,9 @@ class RegistAction extends Model
     use HasFactory;
 
     protected $fillable = [
-        'action', 
-        'table', 
-        'table_id'
+        'action_type',
+        'target_table',
+        'table_id',
+        'user_id',
     ];
 }
