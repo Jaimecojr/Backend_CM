@@ -3,7 +3,6 @@
 namespace Tests\Feature\Reports;
 
 use App\Models\Affiliate;
-use App\Models\Counselor;
 use App\Models\Renovation;
 use App\Models\User;
 use Carbon\Carbon;
@@ -122,6 +121,15 @@ class SalesReportTest extends TestCase
         $response->assertStatus(200)
                  ->assertJsonPath('meta.total', 0)
                  ->assertJsonPath('meta.last_page', 1);
+    }
+
+    public function test_export_rol_no_autorizado_recibe_403(): void
+    {
+        $other = User::factory()->create(['type' => 3]);
+
+        $response = $this->actingAs($other)->getJson('/api/reports/sales/export');
+
+        $response->assertStatus(403);
     }
 
     public function test_export_descarga_excel_con_el_mismo_filtro(): void

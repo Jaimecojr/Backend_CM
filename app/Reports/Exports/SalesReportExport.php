@@ -13,10 +13,12 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithDrawings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\BaseDrawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class SalesReportExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithDrawings
+class SalesReportExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithDrawings, WithStyles
 {
     public function __construct(private array $filters, private User $authUser)
     {
@@ -35,19 +37,18 @@ class SalesReportExport implements FromCollection, WithHeadings, WithMapping, Sh
     public function map($affiliate): array
     {
         /** @var Affiliate $affiliate */
-        $renovation = $affiliate->latestRenovation;
-        $isRenewal  = $renovation !== null;
+        $classification = SalesReport::classify($affiliate);
 
         return [
             $affiliate->payment_date,
-            $isRenewal ? $renovation->date_ini : $affiliate->validity,
+            $classification['fecha_desde'],
             $affiliate->validity_end,
             $affiliate->validity,
             $affiliate->counselor ? trim("{$affiliate->counselor->name} {$affiliate->counselor->lastname}") : '',
             trim("{$affiliate->name} {$affiliate->lastname}"),
             $affiliate->user->name ?? '',
-            $isRenewal ? 'Renovación' : 'Nuevo',
-            number_format((float) ($isRenewal ? $renovation->value : $affiliate->value), 0, ',', '.'),
+            $classification['tipo_venta'],
+            number_format((float) $classification['valor_venta'], 0, ',', '.'),
         ];
     }
 
@@ -60,5 +61,12 @@ class SalesReportExport implements FromCollection, WithHeadings, WithMapping, Sh
         $drawing->setCoordinates('A1');
 
         return $drawing;
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

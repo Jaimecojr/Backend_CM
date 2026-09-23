@@ -88,7 +88,7 @@ class ReportController extends Controller
             ];
         }
 
-        $paginated = $query->paginate((int) ($perPage ?? $default));
+        $paginated = $query->paginate(min((int) ($perPage ?? $default), 100));
 
         return [
             'items' => collect($paginated->items()),
@@ -123,20 +123,19 @@ class ReportController extends Controller
 
     private function mapSaleRow(Affiliate $affiliate): array
     {
-        $renovation = $affiliate->latestRenovation;
-        $isRenewal  = $renovation !== null;
+        $classification = SalesReport::classify($affiliate);
 
         return [
             'id'           => $affiliate->id,
             'payment_date' => $affiliate->payment_date,
-            'fecha_desde'  => $isRenewal ? $renovation->date_ini : $affiliate->validity,
+            'fecha_desde'  => $classification['fecha_desde'],
             'validity_end' => $affiliate->validity_end,
             'validity'     => $affiliate->validity,
             'counselor'    => $affiliate->counselor ? trim("{$affiliate->counselor->name} {$affiliate->counselor->lastname}") : null,
             'name'         => trim("{$affiliate->name} {$affiliate->lastname}"),
             'franchise'    => $affiliate->user->name ?? null,
-            'tipo_venta'   => $isRenewal ? 'Renovación' : 'Nuevo',
-            'valor_venta'  => $isRenewal ? $renovation->value : $affiliate->value,
+            'tipo_venta'   => $classification['tipo_venta'],
+            'valor_venta'  => $classification['valor_venta'],
         ];
     }
 
