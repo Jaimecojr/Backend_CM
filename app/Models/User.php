@@ -77,6 +77,13 @@ class User extends Authenticatable
         return $this->type === 1;
     }
 
+    // Franchise: type = 2. Sees only its own affiliates/counselors/appointments
+    // across the reports module — see App\Reports\Concerns\AppliesFranchiseScope.
+    public function isFranchise(): bool
+    {
+        return $this->type === 2;
+    }
+
     // Relationship with City
     public function city()
     {
