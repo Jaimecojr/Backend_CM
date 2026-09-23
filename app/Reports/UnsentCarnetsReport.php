@@ -18,6 +18,12 @@ class UnsentCarnetsReport
      * prepends (see WhatsAppClient::enviarPlantilla()). Super-admin only —
      * the controller returns 403 before this is ever called for a
      * franchise, so no AppliesFranchiseScope here.
+     *
+     * $authUser is accepted but unused: it's kept for interface symmetry
+     * with every other *Report::query()/failed() method in this module, so
+     * a future franchise-scoping addition here has an obvious place to use
+     * it. The actual super-admin-only check happens in
+     * ReportController::unsentCarnets() before this is ever called.
      */
     private function candidates(array $filters, User $authUser): Builder
     {
@@ -34,7 +40,7 @@ class UnsentCarnetsReport
                 'franchise.name as franchise_name',
             ])
             ->where('whatsapp_messages.type', 'carnet')
-            ->whereRaw('DATE(whatsapp_messages.created_at) BETWEEN ? AND ?', [$from, $to])
+            ->whereBetween('whatsapp_messages.created_at', ["{$from} 00:00:00", "{$to} 23:59:59"])
             ->join('affiliates', function ($join) {
                 $join->on('affiliates.movil', '=', DB::raw('SUBSTR(whatsapp_messages.recipient_id, 3)'));
             })

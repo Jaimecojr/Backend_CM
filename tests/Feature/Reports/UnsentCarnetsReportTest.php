@@ -16,8 +16,8 @@ class UnsentCarnetsReportTest extends TestCase
 
     public function test_57_mas_movil_matchea_al_afiliado(): void
     {
-        $admin     = User::factory()->create(['type' => 1]);
-        $affiliate = Affiliate::factory()->create(['movil' => '3001234567']);
+        $admin = User::factory()->create(['type' => 1]);
+        Affiliate::factory()->create(['movil' => '3001234567']);
 
         WhatsappMessage::factory()->failed()->create([
             'recipient_id' => '573001234567',
@@ -32,8 +32,8 @@ class UnsentCarnetsReportTest extends TestCase
 
     public function test_envio_exitoso_no_aparece_como_no_enviado(): void
     {
-        $admin     = User::factory()->create(['type' => 1]);
-        $affiliate = Affiliate::factory()->create(['movil' => '3009876543']);
+        $admin = User::factory()->create(['type' => 1]);
+        Affiliate::factory()->create(['movil' => '3009876543']);
 
         WhatsappMessage::factory()->create([
             'recipient_id' => '573009876543',
@@ -75,6 +75,53 @@ class UnsentCarnetsReportTest extends TestCase
         $response = $this->actingAs($admin)->getJson('/api/reports/unsent-carnets');
 
         $response->assertStatus(200)->assertJsonCount(0, 'data');
+    }
+
+    public function test_rango_por_defecto_solo_incluye_el_mes_actual(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        Affiliate::factory()->create(['movil' => '3004445566']);
+
+        WhatsappMessage::factory()->failed()->create([
+            'recipient_id' => '573004445566',
+            'type'         => 'carnet',
+            'created_at'   => Carbon::now(),
+        ]);
+        WhatsappMessage::factory()->failed()->create([
+            'recipient_id' => '573004445566',
+            'type'         => 'carnet',
+            'created_at'   => Carbon::now()->subMonth(),
+        ]);
+
+        $response = $this->actingAs($admin)->getJson('/api/reports/unsent-carnets');
+
+        $response->assertStatus(200)->assertJsonCount(1, 'data');
+    }
+
+    public function test_franchise_id_filtra_por_franquicia_del_afiliado(): void
+    {
+        $admin      = User::factory()->create(['type' => 1]);
+        $franchiseA = User::factory()->create(['type' => 2]);
+        $franchiseB = User::factory()->create(['type' => 2]);
+
+        Affiliate::factory()->create(['movil' => '3007778888', 'user_id' => $franchiseA->id]);
+        Affiliate::factory()->create(['movil' => '3009990000', 'user_id' => $franchiseB->id]);
+
+        WhatsappMessage::factory()->failed()->create([
+            'recipient_id' => '573007778888',
+            'type'         => 'carnet',
+            'created_at'   => Carbon::today(),
+        ]);
+        WhatsappMessage::factory()->failed()->create([
+            'recipient_id' => '573009990000',
+            'type'         => 'carnet',
+            'created_at'   => Carbon::today(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->getJson('/api/reports/unsent-carnets?franchise_id=' . $franchiseA->id);
+
+        $response->assertStatus(200)->assertJsonCount(1, 'data');
     }
 
     public function test_franquicia_recibe_403(): void
