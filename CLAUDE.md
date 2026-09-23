@@ -433,60 +433,64 @@ Retorna arrays de 12 posiciones (índice 0 = enero):
 
 ## Módulo de Reportes
 
-El módulo de reportes proporciona 6 reportes paginados de análisis de datos, cada uno con un endpoint de listado y un endpoint `/export` para descargar en Excel.
+El módulo de reportes proporciona 6 reportes de análisis de datos, cada uno con un endpoint de listado y un endpoint `/export` para descargar en Excel.
 
 ### Rutas y Controladores
 Todos los reportes se acceden bajo el prefijo `GET /api/reports/`:
-- **Ventas** (`/sales`, `/sales/export`) → `ReportController@sales()` + `ReportExportController@sales()`
-- **Cartera** (`/balance`, `/balance/export`) → `ReportController@balance()` + `ReportExportController@balance()`
-- **Resumen de Afiliados** (`/affiliates-summary`, `/affiliates-summary/export`) → `ReportController@affiliatesSummary()` + `ReportExportController@affiliatesSummary()`
-- **Citas** (`/appointments`, `/appointments/export`) → `ReportController@appointments()` + `ReportExportController@appointments()`
-- **Sin Renovación** (`/non-renewed-affiliates`, `/non-renewed-affiliates/export`) → `ReportController@nonRenewedAffiliates()` + `ReportExportController@nonRenewedAffiliates()`
-- **Carnets No Enviados** (`/unsent-carnets`, `/unsent-carnets/export`) → `ReportController@unsentCarnets()` + `ReportExportController@unsentCarnets()` (solo super admin)
+- **Ventas** (`/sales`, `/sales/export`) → `ReportController::sales()` + `ReportExportController::sales()`
+- **Cartera** (`/balance`, `/balance/export`) → `ReportController::balance()` + `ReportExportController::balance()`
+- **Resumen de Afiliados** (`/affiliates-summary`, `/affiliates-summary/export`) → `ReportController::affiliatesSummary()` + `ReportExportController::affiliatesSummary()`
+- **Citas** (`/appointments`, `/appointments/export`) → `ReportController::appointments()` + `ReportExportController::appointments()`
+- **Sin Renovación** (`/non-renewed-affiliates`, `/non-renewed-affiliates/export`) → `ReportController::nonRenewedAffiliates()` + `ReportExportController::nonRenewedAffiliates()`
+- **Carnets No Enviados** (`/unsent-carnets`, `/unsent-carnets/export`) → `ReportController::unsentCarnets()` + `ReportExportController::unsentCarnets()` (solo super admin)
 
 Todos requieren autenticación (`auth:sanctum`). Las rutas públicas están explícitamente prohibidas.
 
-### Arquitectura Compartida: `App\Reports\*Report::query()`
-Cada reporte implementa una clase `*Report` en `app/Reports/` (ej. `SalesReport`, `BalanceReport`, etc.) con un método estático `query()` que retorna el `Builder` de Eloquent como **punto único de verdad** para la lógica de filtrado, búsqueda y join. Este builder es compartido por:
-1. `ReportController::action()` — paginación para el listado
-2. `ReportController::totals()` — cálculo de totales (suma, conteos, promedios) del mismo builder
-3. `ReportExportController::action()` — exportación completa a Excel
+### Arquitectura Compartida: `App\Reports\*Report`
+Cada reporte implementa una clase en `app/Reports/` (`SalesReport`, `BalanceReport`, `AffiliatesSummaryReport`, `AppointmentsReport`, `NonRenewedAffiliatesReport`, `UnsentCarnetsReport`) con un método de **instancia** `query()` (o, en `AffiliatesSummaryReport`, `baseQuery()` + `indicators()`; en `UnsentCarnetsReport`, `candidates()` + `failed()`) que retorna el `Builder` de Eloquent como punto único de verdad para filtrado, scoping y joins. Cada clase se inyecta por tipo en la firma del método del controlador (`ReportController`/`ReportExportController`), no se instancia manualmente.
 
-No duplicar filtros/joins entre controladores — todo debe vivir en `*Report::query()`.
+Los totales/indicadores agregados (`SalesReport::totals()`, `BalanceReport::totalBalance()`, `AffiliatesSummaryReport::indicators()`) viven **en la clase del reporte**, no en el controlador — se calculan con agregados a nivel de base de datos (`COUNT`/`SUM`/subconsultas), nunca materializando el listado completo en PHP solo para sumarlo.
 
-### Trait `AppliesFranchiseScope`
-**Comportamiento:** Filtra resultados según el rol del usuario autenticado.
-- Si `user->type === 1` (super admin): sin filtro, ve todos los registros.
-- Si `user->type !== 1` (asesor/franquicia): filtra por `user_id` del usuario autenticado.
+No duplicar filtros/joins entre controladores — todo debe vivir en `*Report`. La clasificación "Nuevo"/"Renovación" de una venta (usada tanto por `ReportController::mapSaleRow()` como por `SalesReportExport::map()`) vive en `SalesReport::classify()`; el patrón equivalente para citas es `AppointmentsReport::patientName()` (nombre del titular/beneficiario + sufijo, ambos derivados de `appointment.type === 1`, un solo discriminador).
 
-**Usado por 5 reportes:**
-- `SalesReport`
-- `BalanceReport`
-- `AffiliatesSummaryReport`
-- `AppointmentsReport`
-- `NonRenewedAffiliatesReport`
+### Trait `App\Reports\Concerns\AppliesFranchiseScope`
+**Comportamiento:** Filtra resultados según el rol del usuario autenticado (aislamiento de datos entre franquicias).
+- Si `user->isSuperAdmin()` (`type === 1`): sin filtro, ve todos los registros.
+- Si no: filtra por `user_id` (o la columna que indique el caller) del usuario autenticado, vía `scopeFranchise()`.
 
-**No usado por:**
-- `UnsentCarnetsReport` — requiere super admin y no filtra por `user_id`
+**Usado por 5 reportes:** `SalesReport`, `BalanceReport`, `AffiliatesSummaryReport`, `AppointmentsReport`, `NonRenewedAffiliatesReport`.
 
-### Trait `AuthorizesReportAccess`
-**Comportamiento:** Lógica centralizada de autorización (403) compartida entre `ReportController` y `ReportExportController`.
-- Verifica que el usuario sea super admin para `UnsentCarnets`.
-- Verifica que el usuario sea super admin para acceder a datos de otros usuarios (si el reporte usa `AppliesFranchiseScope`).
-- Permite al usuario ver sus propios datos sin restricción.
+**No usado por:** `UnsentCarnetsReport` — es super-admin only y nunca filtra por `user_id` propio (solo admite el filtro opcional `franchise_id` para que el admin elija).
 
-**Implementado en:**
-- `app/Http/Traits/AuthorizesReportAccess.php` — método `authorizeReportAccess()` usado en ambos controladores.
+### Trait `App\Http\Controllers\Concerns\AuthorizesReportAccess`
+**Comportamiento:** Único punto de verdad para el 403 de rol (no confundir con el aislamiento de datos de `AppliesFranchiseScope` — esto solo decide si el usuario entra o no, no qué ve una vez dentro).
+- Expone `reportAccessDenied(bool $franchiseAllowed = true, string $message = '...'): ?JsonResponse`, llamado al inicio de cada método de `ReportController` y `ReportExportController`.
+- Super admin: siempre `null` (pasa).
+- Franquicia (`isFranchise()`): pasa solo si `$franchiseAllowed` (falso para `UnsentCarnets`, que lo llama con `franchiseAllowed: false`).
+- Cualquier otro rol (incluyendo `type = 3`, sin flujo de login real hoy pero un valor válido de `users.type`): `403` con el `$message` dado.
+
+**Implementado en:** `app/Http/Controllers/Concerns/AuthorizesReportAccess.php`.
+
+### Paginación y `per_page`
+`ReportController::paginateOrAll()` soporta `per_page=all` (retorna todo, sin límite) o un entero, acotado con `min($perPage, 100)` antes de paginar. `UnsentCarnetsReport` pagina manualmente sobre una `Collection` en PHP (no `->paginate()` de Eloquent) porque determinar "no enviado" requiere decodificar el JSON de `response` fila por fila — no es portable en SQL entre SQLite (tests) y MySQL (prod).
 
 ### Decisiones de Negocio
 
-**Sin Renovación (Report 5):**
-Ignora deliberadamente el campo `stade` — lista **todos** los afiliados (activos e inactivos) que no tienen una renovación registrada en los últimos 12 meses. Esta decisión permite detectar tanto afiliados vencidos que podrían renovarse como potenciales pérdidas de clientes. Ver `docs/superpowers/specs/2026-09-22-reports-module-design.md` para el rationale completo.
+**Sin Renovación (Report 5) — `NonRenewedAffiliatesReport`:**
+Ignora deliberadamente el campo `stade` — la condición es únicamente `validity_end <= hoy`, sin filtrar por estado. El cron diario `affiliates:update-expired` ya mueve a `stade = 2` a los afiliados vencidos, así que filtrar por `stade = 1` (como el resto de reportes) dejaría este reporte casi vacío. Ver el docblock de `NonRenewedAffiliatesReport::query()` para el detalle.
 
-**Carnets No Enviados (Report 6):**
-- Determina el estado "no enviado" analizando el campo `response` de la tabla `whatsapp_messages` (JSON cacheado desde Meta), nunca el campo `deleted`.
-- Es **super-admin only** — no filtra por `user_id`.
-- Estructura: agrupa por afiliado y muestra el estado del último intento (`response`), con timestamps de intentos previos.
+**Carnets No Enviados (Report 6) — `UnsentCarnetsReport`:**
+- Determina el estado "no enviado" analizando el campo `response` de `whatsapp_messages` (JSON cacheado desde Meta: falta `messages[0].id` ⇒ falló), nunca el campo `deleted`.
+- Es **super-admin only** (`franchiseAllowed: false` en `AuthorizesReportAccess`).
+- **Sin agrupar:** `failed()` retorna una fila por cada mensaje fallido — no agrupa por afiliado ni resume "último intento".
+- El match afiliado↔mensaje se hace despojando el prefijo `'57'` del `recipient_id` y comparándolo contra `affiliates.movil` (ver docblock de `candidates()`).
+- Ventas (Report 1) y este reporte comparten la particularidad de aceptar un parámetro `$authUser` que hoy no se usa dentro de `candidates()`/`failed()` (el 403 ya se resolvió antes, en el controlador) — se deja por simetría con la firma del resto de reportes.
+
+**Cartera (Report 2) — `BalanceReport`:**
+Requiere `whereHas('counselor', fn ($q) => $q->where('state', 1))` — un afiliado con saldo pendiente deja de aparecer si su asesor fue desactivado. Es intencional (replica el reporte del sistema anterior), no un bug.
+
+### Índices relevantes
+Migración consolidada `2026_09_23_000000_add_reports_module_indexes.php`: `affiliates.payment_date` (filtro/orden principal de Ventas) y `whatsapp_messages.created_at` (filtro de rango de Carnets No Enviados).
 
 ### Referencia
 Para el diseño completo del módulo (rationale de filtros, scopes, Excel, totales, y decisiones de negocio), ver:
