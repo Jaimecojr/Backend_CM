@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->longText('response');
             $table->string('recipient_id');
+            $table->string('type')->nullable();
             $table->tinyInteger('deleted')->default(0);
             $table->timestamps();
         });

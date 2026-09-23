@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('wa_api_version');
             $table->string('wa_phone_number_id');
-            $table->string('wa_bearer_token');
+            $table->text('wa_bearer_token')->nullable();
             $table->string('wa_template_name');
+            $table->string('wa_appointment_template_name')->nullable();
             $table->timestamps();
         });
     }

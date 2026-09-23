@@ -30,6 +30,11 @@ return new class extends Migration
             $table->foreign('doctor_id')->references('id')->on('doctors')->onDelete('cascade');
             $table->foreign('city_id')->references('id')->on('cities')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+            // Indexes
+            $table->index('date', 'appointments_date_index');
+            $table->index('doctor_id', 'appointments_doctor_id_index');
+            $table->index('afi_code', 'appointments_afi_code_index');
         });
     }
 

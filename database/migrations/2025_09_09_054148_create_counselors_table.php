@@ -26,7 +26,7 @@ return new class extends Migration
                 'Con Garantizado'
             ]);
             $table->string('email')->nullable();
-            $table->string('password');
+            $table->string('password')->nullable();
             $table->string('rol')->nullable();
             $table->string('phone')->nullable();
             $table->string('movil')->nullable();
@@ -39,6 +39,11 @@ return new class extends Migration
             // Foreign Keys
             $table->foreign('city_id')->references('id')->on('cities')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+            // Indexes
+            $table->index('city_id', 'counselors_city_id_index');
+            $table->index('user_id', 'counselors_user_id_index');
+            $table->index('state', 'counselors_state_index');
         });
     }
 

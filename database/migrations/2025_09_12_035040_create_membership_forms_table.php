@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('address');
             $table->unsignedBigInteger('city_id'); // foránea ciudad
             $table->date('date');
-            $table->string('seller');
+            $table->string('seller')->nullable();
             $table->tinyInteger('state')->default(0);
             $table->timestamps();
 

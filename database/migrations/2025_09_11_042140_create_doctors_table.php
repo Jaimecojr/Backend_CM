@@ -17,6 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('specialty_id');
             $table->string('name');
             $table->string('lastname');
+            $table->string('email')->nullable();
             $table->string('phone');
             $table->string('movil');
             $table->string('address');
@@ -29,6 +30,11 @@ return new class extends Migration
             // Llaves foraneas
             $table->foreign('specialty_id')->references('id')->on('specialties')->onDelete('cascade');
             $table->foreign('city_id')->references('id')->on('cities')->onDelete('cascade');
+
+            // Indexes
+            $table->index('specialty_id', 'doctors_specialty_id_index');
+            $table->index('city_id', 'doctors_city_id_index');
+            $table->index('state', 'doctors_state_index');
         });
     }
 

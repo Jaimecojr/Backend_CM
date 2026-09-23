@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('affiliate_id');
             $table->string('name');
-            $table->string('id_card');
+            $table->string('id_card')->nullable();
             $table->date('bithdate')->nullable();
             $table->timestamps();
 
