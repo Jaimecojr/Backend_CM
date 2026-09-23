@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Agreement;
+use App\Services\RegistActionLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class AgreementController extends Controller
 {
+    public function __construct(private RegistActionLogger $registActionLogger)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -61,6 +66,8 @@ class AgreementController extends Controller
             'state'   => $request->state,
             'city_id' => $request->city_id,
         ]);
+
+        $this->registActionLogger->created('agreements', $agreement->id);
 
         return response()->json([
             'message' => 'Convenio creado correctamente',
@@ -126,6 +133,12 @@ class AgreementController extends Controller
         $agreement->city_id = $request->city_id;
 
         $agreement->save();
+
+        if ($agreement->wasChanged('state')) {
+            $this->registActionLogger->statusChanged('agreements', $agreement->id);
+        } else {
+            $this->registActionLogger->updated('agreements', $agreement->id);
+        }
 
         return response()->json([
             'message' => 'Convenio actualizado correctamente',

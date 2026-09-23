@@ -76,4 +76,53 @@ class AgreementControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));
     }
+
+    public function test_store_registra_regist_action_de_creacion(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+
+        $response = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'I',
+            'target_table' => 'agreements',
+            'table_id'     => $id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_update_de_state_registra_action_type_e(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $created = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $payload = $this->payloadValido();
+        $payload['state'] = 0;
+        $this->actingAs($admin)->putJson("/api/agreements/{$id}", $payload);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'E',
+            'target_table' => 'agreements',
+            'table_id'     => $id,
+        ]);
+    }
+
+    public function test_update_sin_cambiar_state_registra_action_type_u(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $created = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $payload = $this->payloadValido();
+        $payload['name'] = 'Convenio Editado';
+        $this->actingAs($admin)->putJson("/api/agreements/{$id}", $payload);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'U',
+            'target_table' => 'agreements',
+            'table_id'     => $id,
+        ]);
+    }
 }
