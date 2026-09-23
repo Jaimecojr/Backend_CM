@@ -64,4 +64,57 @@ class SpecialtyControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseMissing('specialties', ['id' => $specialty->id]);
     }
+
+    public function test_store_registra_regist_action_de_creacion(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+
+        $response = $this->actingAs($admin)->postJson('/api/specialties', ['name' => 'Oncología']);
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'I',
+            'target_table' => 'specialties',
+            'table_id'     => $id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_store_no_autorizado_no_registra_regist_action(): void
+    {
+        $asesor = User::factory()->create(['type' => 2]);
+
+        $this->actingAs($asesor)->postJson('/api/specialties', ['name' => 'Oncología']);
+
+        $this->assertDatabaseCount('regist_actions', 0);
+    }
+
+    public function test_update_de_state_registra_action_type_e(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $specialty = Specialty::create(['name' => 'Urología', 'state' => 1]);
+
+        $this->actingAs($admin)->putJson("/api/specialties/{$specialty->id}", ['state' => 0]);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'E',
+            'target_table' => 'specialties',
+            'table_id'     => $specialty->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_update_de_nombre_sin_cambiar_state_registra_action_type_u(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $specialty = Specialty::create(['name' => 'Endocrinología', 'state' => 1]);
+
+        $this->actingAs($admin)->putJson("/api/specialties/{$specialty->id}", ['name' => 'Endocrinología Clínica']);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'U',
+            'target_table' => 'specialties',
+            'table_id'     => $specialty->id,
+        ]);
+    }
 }

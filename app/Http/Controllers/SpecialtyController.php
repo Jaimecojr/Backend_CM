@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Specialty;
+use App\Services\RegistActionLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class SpecialtyController extends Controller
 {
+    public function __construct(private RegistActionLogger $registActionLogger)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -63,6 +68,8 @@ class SpecialtyController extends Controller
             'name'  => $request->name,
             'state' => $request->state ?? 1,
         ]);
+
+        $this->registActionLogger->created('specialties', $specialty->id);
 
         return response()->json([
             'message' => 'Especialidad creada correctamente',
@@ -122,6 +129,12 @@ class SpecialtyController extends Controller
         if ($request->filled('state') || $request->has('state')) $specialty->state = $request->state;
 
         $specialty->save();
+
+        if ($specialty->wasChanged('state')) {
+            $this->registActionLogger->statusChanged('specialties', $specialty->id);
+        } else {
+            $this->registActionLogger->updated('specialties', $specialty->id);
+        }
 
         return response()->json([
             'message' => 'Especialidad actualizada correctamente',
