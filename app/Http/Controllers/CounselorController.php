@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateCounselorRequest;
 use App\Models\Counselor;
+use App\Services\RegistActionLogger;
 use App\Support\IdCardLookup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Validator;
 
 class CounselorController extends Controller
 {
+    public function __construct(private RegistActionLogger $registActionLogger)
+    {
+    }
+
     // Public and static so UpdateCounselorRequest can reuse the same list
     // instead of duplicating the 4 valid values for `type_contra`.
     public static function typeContraValues(): array
@@ -104,6 +109,8 @@ class CounselorController extends Controller
             'user_id'        => $request->user_id,
         ]);
 
+        $this->registActionLogger->created('counselors', $counselor->id);
+
         return response()->json([
             'message' => 'Vendedor creado correctamente',
             'data' => $counselor,
@@ -158,6 +165,12 @@ class CounselorController extends Controller
         }
 
         $counselor->update($data);
+
+        if ($counselor->wasChanged('state')) {
+            $this->registActionLogger->statusChanged('counselors', $counselor->id);
+        } else {
+            $this->registActionLogger->updated('counselors', $counselor->id);
+        }
 
         return response()->json([
             'message' => 'Vendedor actualizado correctamente',

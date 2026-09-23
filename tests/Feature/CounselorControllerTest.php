@@ -191,4 +191,48 @@ class CounselorControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('counselors', ['id' => $id, 'phone' => null]);
     }
+
+    public function test_store_registra_regist_action_de_creacion(): void
+    {
+        $admin = User::factory()->create();
+        $response = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'I',
+            'target_table' => 'counselors',
+            'table_id'     => $id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_update_de_state_registra_action_type_e(): void
+    {
+        $admin = User::factory()->create();
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $this->actingAs($admin)->patchJson("/api/counselors/{$id}", ['state' => 2]);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'E',
+            'target_table' => 'counselors',
+            'table_id'     => $id,
+        ]);
+    }
+
+    public function test_update_sin_cambiar_state_registra_action_type_u(): void
+    {
+        $admin = User::factory()->create();
+        $created = $this->actingAs($admin)->postJson('/api/counselors', $this->payloadValido());
+        $id = $created->json('data.id');
+
+        $this->actingAs($admin)->patchJson("/api/counselors/{$id}", ['phone' => '6041112233']);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'U',
+            'target_table' => 'counselors',
+            'table_id'     => $id,
+        ]);
+    }
 }
