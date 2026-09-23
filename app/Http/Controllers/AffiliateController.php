@@ -8,6 +8,7 @@ use App\Http\Requests\StoreAffiliateRequest;
 use App\Http\Requests\UpdateAffiliateRequest;
 use App\Models\Affiliate;
 use App\Services\BeneficiarySyncService;
+use App\Services\RegistActionLogger;
 use App\Support\IdCardLookup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -16,8 +17,10 @@ use Illuminate\Support\Facades\Validator;
 
 class AffiliateController extends Controller
 {
-    public function __construct(private BeneficiarySyncService $beneficiarySync)
-    {
+    public function __construct(
+        private BeneficiarySyncService $beneficiarySync,
+        private RegistActionLogger $registActionLogger,
+    ) {
     }
 
     /**
@@ -136,6 +139,10 @@ class AffiliateController extends Controller
         }
 
         $affiliate->update(Arr::except($request->validated(), $excludedFields));
+
+        if ($affiliate->wasChanged('stade')) {
+            $this->registActionLogger->statusChanged('affiliates', $affiliate->id);
+        }
 
         if ($request->has('beneficiaries') && is_array($request->beneficiaries)) {
             $this->beneficiarySync->sync($affiliate, $request->beneficiaries);

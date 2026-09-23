@@ -89,4 +89,19 @@ class AffiliateStadeAuthorizationTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_super_admin_cambia_stade_y_queda_registrado(): void
+    {
+        $admin = User::factory()->create(['type' => 1]);
+        $affiliate = Affiliate::factory()->create(['stade' => 1]);
+
+        $this->actingAs($admin)->patchJson("/api/affiliates/{$affiliate->id}", ['stade' => 2]);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'E',
+            'target_table' => 'affiliates',
+            'table_id'     => $affiliate->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
 }
