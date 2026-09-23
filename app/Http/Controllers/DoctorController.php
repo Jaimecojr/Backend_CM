@@ -6,11 +6,16 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateDoctorRequest;
 use App\Models\Doctor;
+use App\Services\RegistActionLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class DoctorController extends Controller
 {
+    public function __construct(private RegistActionLogger $registActionLogger)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -187,6 +192,8 @@ class DoctorController extends Controller
             'state'           => $request->state ?? 1,
         ]);
 
+        $this->registActionLogger->created('doctors', $doctor->id);
+
         return response()->json([
             'message' => 'Médico creado correctamente',
             'data' => $doctor,
@@ -229,6 +236,12 @@ class DoctorController extends Controller
         }
 
         $doctor->update($request->validated());
+
+        if ($doctor->wasChanged('state')) {
+            $this->registActionLogger->statusChanged('doctors', $doctor->id);
+        } else {
+            $this->registActionLogger->updated('doctors', $doctor->id);
+        }
 
         return response()->json([
             'message' => 'Médico actualizado correctamente',

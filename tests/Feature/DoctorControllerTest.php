@@ -169,4 +169,67 @@ class DoctorControllerTest extends TestCase
         $response->assertStatus(400);
         $response->assertJsonValidationErrors(['movil']);
     }
+
+    public function test_store_registra_regist_action_de_creacion(): void
+    {
+        $admin = User::factory()->create();
+        $referencia = Doctor::factory()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/doctors', $this->payloadValido($referencia));
+        $id = $response->json('data.id');
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'I',
+            'target_table' => 'doctors',
+            'table_id'     => $id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_store_con_validacion_fallida_no_registra_regist_action(): void
+    {
+        $admin = User::factory()->create();
+        $referencia = Doctor::factory()->create();
+        $payload = $this->payloadValido($referencia);
+        $payload['movil'] = '123';
+
+        $this->actingAs($admin)->postJson('/api/doctors', $payload);
+
+        $this->assertDatabaseCount('regist_actions', 0);
+    }
+
+    public function test_update_de_campo_normal_registra_action_type_u(): void
+    {
+        $admin = User::factory()->create();
+        $doctor = Doctor::factory()->create(['state' => 1]);
+
+        $this->actingAs($admin)->patchJson("/api/doctors/{$doctor->id}", [
+            'value_agreement' => 120000,
+        ]);
+
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'U',
+            'target_table' => 'doctors',
+            'table_id'     => $doctor->id,
+            'user_id'      => $admin->id,
+        ]);
+    }
+
+    public function test_update_que_cambia_state_registra_action_type_e_una_sola_vez(): void
+    {
+        $admin = User::factory()->create();
+        $doctor = Doctor::factory()->create(['state' => 1]);
+
+        $this->actingAs($admin)->patchJson("/api/doctors/{$doctor->id}", [
+            'state' => 2,
+            'value_agreement' => 130000,
+        ]);
+
+        $this->assertDatabaseCount('regist_actions', 1);
+        $this->assertDatabaseHas('regist_actions', [
+            'action_type'  => 'E',
+            'target_table' => 'doctors',
+            'table_id'     => $doctor->id,
+        ]);
+    }
 }
