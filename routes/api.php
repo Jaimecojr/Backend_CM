@@ -129,5 +129,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('sales',        [ReportController::class, 'sales']);
         Route::get('sales/export', [ReportExportController::class, 'sales']);
+
+        Route::get('balance',        [ReportController::class, 'balance']);
+        Route::get('balance/export', [ReportExportController::class, 'balance']);
     });
 });

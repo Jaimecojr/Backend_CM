@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesReportAccess;
+use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
 use App\Models\Affiliate;
 use App\Models\Counselor;
+use App\Reports\BalanceReport;
 use App\Reports\SalesReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -128,5 +130,31 @@ class ReportController extends Controller
             'tipo_venta'   => $isRenewal ? 'Renovación' : 'Nuevo',
             'valor_venta'  => $isRenewal ? $renovation->value : $affiliate->value,
         ];
+    }
+
+    public function balance(BalanceReportRequest $request, BalanceReport $report)
+    {
+        if ($denied = $this->reportAccessDenied()) {
+            return $denied;
+        }
+
+        $user    = auth()->user();
+        $filters = $request->validated();
+        $result  = $this->paginateOrAll($report->query($filters, $user), $filters['per_page'] ?? null, 15);
+
+        $items = $result['items']->map(fn (Affiliate $a) => [
+            'id'        => $a->id,
+            'counselor' => $a->counselor ? trim("{$a->counselor->name} {$a->counselor->lastname}") : null,
+            'name'      => trim("{$a->name} {$a->lastname}"),
+            'balance'   => $a->balance,
+            'validity'  => $a->validity,
+        ]);
+
+        return response()->json([
+            'message'       => 'Reporte de cartera obtenido correctamente',
+            'data'          => $items,
+            'meta'          => $result['meta'],
+            'total_balance' => $report->totalBalance($filters, $user),
+        ], 200);
     }
 }

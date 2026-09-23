@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesReportAccess;
+use App\Http\Requests\Reports\BalanceReportRequest;
 use App\Http\Requests\Reports\SalesReportRequest;
+use App\Reports\Exports\BalanceReportExport;
 use App\Reports\Exports\SalesReportExport;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
@@ -23,5 +25,16 @@ class ReportExportController extends Controller
         $filename = 'Reporte_Ventas_' . Carbon::now()->format('d-m-Y') . '.xlsx';
 
         return Excel::download(new SalesReportExport($request->validated(), auth()->user()), $filename);
+    }
+
+    public function balance(BalanceReportRequest $request)
+    {
+        if ($denied = $this->reportAccessDenied(message: 'No tiene permisos para exportar este reporte')) {
+            return $denied;
+        }
+
+        $filename = 'Reporte_Cartera_' . Carbon::now()->format('d-m-Y') . '.xlsx';
+
+        return Excel::download(new BalanceReportExport($request->validated(), auth()->user()), $filename);
     }
 }
