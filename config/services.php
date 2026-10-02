@@ -37,6 +37,14 @@ return [
 
     'whatsapp' => [
         'webhook_token' => env('WHATSAPP_WEBHOOK_TOKEN'),
+        // Meta "App Secret": signs every webhook POST (X-Hub-Signature-256).
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+    ],
+
+    'recaptcha' => [
+        // Server-side secret — never expose it to the frontend (no NEXT_PUBLIC_ prefix).
+        'secret' => env('RECAPTCHA_SECRET_KEY'),
+        'min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
     ],
 
 ];
