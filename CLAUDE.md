@@ -20,7 +20,7 @@ Para soportar ambos formatos existe un `UserProvider` personalizado:
 - Si el hash guardado empieza con `$2y$` o `$2a$` → verifica con bcrypt (`Hash::check`)
 - Cualquier otro formato → verifica con `md5($password) === $stored`
 
-**No modificar el driver en `config/auth.php` de vuelta a `eloquent`** — haría que todos los usuarios legacy (MD5) dejen de poder iniciar sesión. La migración a bcrypt ocurre de forma transparente a medida que cada usuario cambia su contraseña.
+**No modificar el driver en `config/auth.php` de vuelta a `eloquent`** — haría que todos los usuarios legacy (MD5) dejen de poder iniciar sesión. La migración a bcrypt ocurre de forma transparente **en el primer login exitoso** de cada usuario: el `SessionGuard` de Laravel llama a `rehashPasswordIfRequired()` (`hashing.rehash_on_login`, activo por defecto) y un hash MD5 siempre "necesita rehash". Solo las cuentas que nunca vuelven a iniciar sesión siguen en MD5. La comparación MD5 usa `hash_equals()` (tiempo constante) — no volver a `===`.
 
 ## Cookie `auth_hint` (`routes/web.php`)
 
@@ -187,7 +187,7 @@ Para que el scheduler funcione en producción se debe configurar un **Cron Job**
 - **Comando:** `php artisan schedule:run`
 - **Intervalo:** `* * * * *` (cada minuto — Laravel decide internamente qué tareas correr en ese momento)
 - Agregar el cron job en el panel del servidor apuntando al PHP del proyecto.
-- Sin este cron configurado, el comando `affiliates:update-expired` nunca se ejecutará automáticamente.
+- Sin este cron configurado, el comando `affiliates:update-expired` nunca se ejecutará automáticamente (ni `carnets:purge`, que borra los PDF de carnets viejos).
 
 ## Rutas Públicas (Sitio Web)
 
@@ -237,7 +237,7 @@ Siempre se registra el resultado, tanto si fue exitoso como si falló.
 Todos los parámetros WA viven en la tabla `settings` (singleton — siempre hay una sola fila):
 - `wa_api_version`: versión de la Graph API (ej. `v18.0`)
 - `wa_phone_number_id`: ID del número de teléfono en Meta
-- `wa_bearer_token`: token de acceso — columna tipo `TEXT` (los tokens de Meta superan `varchar(255)`)
+- `wa_bearer_token`: token de acceso — columna tipo `TEXT` (los tokens de Meta superan `varchar(255)`). **Cifrado** (cast `encrypted`) y **de solo escritura**: está en `$hidden`, el panel solo recibe `wa_bearer_token_set` (bool), y un `PATCH` con el token vacío conserva el actual.
 - `wa_template_name`: nombre de la plantilla para carnets
 - `wa_appointment_template_name`: nombre de la plantilla para confirmación de citas (nullable)
 
@@ -319,7 +319,8 @@ Login y logout viven en `app/Http/Controllers/AuthController.php` (métodos `log
 8. Si el resultado retornado por `enviarPlantilla()` trae `enviado = true` (Meta confirmó con `messages[0].id`) → `affiliate->carnet = 'si'`, retorna 200
 
 ### Consideraciones importantes
-- **Timestamp en filename:** Garantiza URL única en cada envío para evitar que Meta sirva versión cacheada del PDF anterior.
+- **Nombre aleatorio:** `carnet_{Str::random(40)}.pdf`. El PDF tiene datos personales y está en el disco público para que Meta lo descargue: un nombre con id secuencial + timestamp (el formato anterior) se podía adivinar. El nombre nuevo en cada envío también evita que Meta sirva una versión cacheada.
+- **Limpieza:** `php artisan carnets:purge` (programado diario 03:00 en `routes/console.php`) borra los PDF con más de 7 días.
 - **`carnet = 'si'`** solo se actualiza si Meta confirma con `messages[0].id`. Nunca se resetea a `'no'` automáticamente.
 - **URL pública del PDF:** Requiere `php artisan storage:link` activo. Ejecutar una vez al configurar el servidor de producción.
 - **Encoding:** `enc()` convierte UTF-8 → windows-1252 con `iconv` para que TCPDF renderice tildes correctamente con fuentes estándar (Helvetica).
@@ -491,6 +492,8 @@ Ignora deliberadamente el campo `stade` — la condición es únicamente `validi
 Requiere `whereHas('counselor', fn ($q) => $q->where('state', 1))` — un afiliado con saldo pendiente deja de aparecer si su asesor fue desactivado. Es intencional (replica el reporte del sistema anterior), no un bug.
 
 ### Índices relevantes
+**Trampa de fechas legadas en migraciones:** `affiliates` (y posiblemente otras tablas importadas) tiene miles de filas con `'0000-00-00'` (ej. `bithdate`). Con el `sql_mode` estricto de Laravel, cualquier `ALTER TABLE` que reconstruya la tabla (agregar índice/columna) falla con `1292 Incorrect date value`. Las migraciones que alteren estas tablas deben relajar `NO_ZERO_DATE`/`NO_ZERO_IN_DATE` solo durante la sesión — ver `withLegacyZeroDatesAllowed()` en la migración de abajo — sin tocar los datos.
+
 Migración consolidada `2026_09_23_000000_add_reports_module_indexes.php`: `affiliates.payment_date` (filtro/orden principal de Ventas) y `whatsapp_messages.created_at` (orden de Carnets No Enviados — ya no filtra por fecha, ver Decisiones de Negocio).
 
 ### Referencia
@@ -510,6 +513,73 @@ Para el diseño completo del módulo (rationale de filtros, scopes, Excel, total
   prerrequisito antes de poder verificar este objetivo.
 - **En Windows:** correr `XDEBUG_MODE=off php artisan test` — con Xdebug activo, un test que fuerza
   una excepción de red dentro de `Http::fake()` produce un segfault.
+
+## Seguridad (auditoría pre-lanzamiento, 2026-10-01)
+
+Ocultar una pantalla en el panel **no es control de acceso**: una franquicia puede llamar la API
+directamente. Toda restricción de rol vive en el backend.
+
+### Roles y acceso por registro
+- **Middleware `super-admin`** (`EnsureSuperAdmin`, alias en `bootstrap/app.php`): 403 `No autorizado`
+  para quien no sea `type = 1`. Hoy protege: crear/borrar usuarios, contenido del sitio web
+  (`content-allies`, `content-specialists`), `DELETE agreements/{id}` y `DELETE specialties/{id}`.
+  Ruta nueva solo-admin → agregarle este middleware, no un `if` inline.
+- **Middleware `active`** (`EnsureUserIsActive`) en todo el grupo `auth:sanctum` y en `/user`: cierra la
+  sesión (401) de un usuario desactivado (`state != 1`) aunque ya estuviera logueado. El login también
+  exige `state = 1`.
+- **`UserController::update()`**: un no-admin solo puede editar su propio registro (pantalla "Mi
+  cuenta") y nunca `type`, `state` ni `password` (se ignoran en silencio). Su contraseña va por
+  `change-password`, que exige la actual.
+- **Afiliados — compartidos entre franquicias a propósito** (decisión de negocio: hay procesos que
+  necesitan datos de otra franquicia). **No** filtrar `index`/`show`/`update` por `user_id`. La única
+  restricción: `user_id` (la franquicia) solo lo cambia el super admin; para el resto se ignora en
+  `update()`, mismo patrón que `stade`.
+- **Asesores y médicos** también se gestionan desde cualquier franquicia (decisión de negocio) — sin
+  gate de rol.
+- **Citas — sí pertenecen a la franquicia**: `index`/`today` ya filtraban por `user_id`;
+  `show`/`update`/`destroy` responden 403 si la cita es de otra franquicia (`denyUnlessOwner()`), y en
+  `store`/`update` el `user_id` se fuerza al usuario autenticado salvo para el super admin (`withOwner()`).
+
+### Rate limiting (`AppServiceProvider::configureRateLimiting()`)
+- `api`: 240/min por usuario o IP, global (`throttleApi()` en `bootstrap/app.php`).
+- `login`: 5/min por usuario+IP y 20/min por IP en `POST /login`.
+- `public-forms`: 5/min por IP en `/api/public/contact` y `/api/public/affiliate-request`.
+- `throttle:5,1` en `change-password`; `throttle:10,1` en `affiliate-status` (ya existía).
+
+### Formularios públicos y webhook
+- **reCAPTCHA en backend** (`App\Services\RecaptchaVerifier`): `contact` y `affiliate-request`
+  verifican `recaptcha_token` contra Google (v2 y v3 — en v3 compara `score` con
+  `RECAPTCHA_MIN_SCORE`). Si `RECAPTCHA_SECRET_KEY` está vacío la verificación se omite (solo para
+  local/tests) — **en producción debe estar configurado**.
+- **Webhook WhatsApp:** `handle()` exige la firma `X-Hub-Signature-256` (HMAC-SHA256 con
+  `WHATSAPP_APP_SECRET`); sin el secreto configurado rechaza todo (fail closed). `verify()` exige token
+  configurado, compara con `hash_equals`, solo acepta un `hub_challenge` numérico y responde
+  `text/plain`.
+
+### Datos sensibles
+- **Columnas cifradas (cast `encrypted`):** `settings.wa_bearer_token`, `contacts.comment`,
+  `affiliate_notes.body`. La migración `2026_10_01_000000_encrypt_sensitive_text_columns` cifró las
+  filas existentes. Dependen de `APP_KEY`: **si se rota la clave, la anterior va en
+  `APP_PREVIOUS_KEYS`** o esos valores quedan ilegibles. No se pueden buscar con `WHERE`/`LIKE` — no
+  cifrar campos que se busquen (`id_card`, `movil`, nombres).
+- Compatible con `UppercasesAttributes`: el trait pasa a mayúsculas y luego el cast cifra.
+- `Counselor::$hidden = ['password']` (hash legado del sistema anterior; antes salía en
+  `/api/counselors` y en el eager load de `affiliate->counselor`).
+- `publicStatus` oculta los `id` internos del afiliado y de sus beneficiarios.
+
+### Otras reglas
+- **Contraseñas nuevas:** `Password::min(8)->letters()->numbers()` en `StoreUserRequest`,
+  `UpdateUserRequest` y `changePassword`.
+- **`per_page`:** siempre `max(1, min((int) ..., 100))` en los `index()` paginados.
+- **Subidas de imagen:** `$file->store($dir, 'public')` (nombre aleatorio y extensión derivada del
+  contenido), nunca `getClientOriginalExtension()`. URLs de aliados: regla `url:http,https`.
+- **Cabeceras:** `SecurityHeaders` (global) agrega `nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Permissions-Policy`, CSP `default-src 'none'` (la API solo devuelve JSON/archivos)
+  y HSTS en producción sobre HTTPS.
+- **Producción:** `URL::forceScheme('https')`. Defaults de `config/session.php`: driver `file`
+  (no `cookie`), `domain` null, `secure` true si `APP_ENV=production`.
+- **Secretos de test:** `phpunit.xml`/`.env.testing` solo llevan valores de relleno (`APP_KEY`
+  propio de tests, `test-webhook-token`). Nunca copiar ahí valores del `.env` real.
 
 ## Reglas Generales
 1. **Idioma:** El código en sí —comentarios, PHPDoc, nombres de métodos, propiedades y variables— debe estar en **inglés**, siguiendo la convención estándar de desarrollo (esto revierte la regla anterior de este documento). Los strings de respuesta JSON y mensajes de validación que ve el usuario final del panel siguen en **español** — son producto, no código, y el panel es para asesores/franquicias colombianas. Los comentarios de código no deben referenciar `CLAUDE.md` ni otros documentos internos por nombre; deben ser autocontenidos y explicar el WHY directamente.
