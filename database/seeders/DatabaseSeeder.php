@@ -15,6 +15,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // The factory user has a known password ("password"): it must never exist in production.
+        if (app()->isProduction()) {
+            return;
+        }
+
         // User::factory(10)->create();
 
         User::factory()->create([

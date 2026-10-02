@@ -1,8 +1,10 @@
 *.log
 .DS_Store
 .env
-.env.backup
-.env.production
+.env.*
+!.env.example
+# Only dummy values allowed in .env.testing (it is committed for CI).
+!.env.testing
 .phpactor.json
 .phpunit.result.cache
 /.fleet

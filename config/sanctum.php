@@ -47,7 +47,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    // The SPA uses session cookies (unaffected); this only caps any API token issued in the future.
+    'expiration' => 60 * 24,
 
     /*
     |--------------------------------------------------------------------------

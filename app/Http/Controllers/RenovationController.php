@@ -39,7 +39,7 @@ class RenovationController extends Controller
             ], 400);
         }
 
-        $renovation = Renovation::create($request->all());
+        $renovation = Renovation::create($validator->validated());
 
         // Reactivates the affiliate only if it was inactive due to expiration (stade=2).
         // This is a backend fallback: the frontend also sends stade=1 when renewing,

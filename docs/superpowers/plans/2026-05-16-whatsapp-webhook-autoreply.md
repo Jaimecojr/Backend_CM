@@ -34,7 +34,7 @@ Al final del archivo, agregar:
 
 ```
 # WhatsApp Webhook
-WHATSAPP_WEBHOOK_TOKEN=contactomedico_webhook_2026
+WHATSAPP_WEBHOOK_TOKEN=<WHATSAPP_WEBHOOK_TOKEN>
 ```
 
 - [ ] **Step 2: Documentar la variable en `.env.example`**
@@ -74,7 +74,7 @@ class WhatsAppWebhookTest extends TestCase
     {
         $response = $this->getJson('/api/webhook/whatsapp?' . http_build_query([
             'hub_mode'         => 'subscribe',
-            'hub_verify_token' => 'contactomedico_webhook_2026',
+            'hub_verify_token' => '<WHATSAPP_WEBHOOK_TOKEN>',
             'hub_challenge'    => '987654321',
         ]));
 
@@ -361,7 +361,7 @@ Una vez deployado en el servidor de producción:
 1. Ir a [developers.facebook.com](https://developers.facebook.com) → tu app → WhatsApp → Configuration
 2. Sección **Webhooks** → Edit
 3. **Callback URL:** `https://tu-dominio.com/api/webhook/whatsapp`
-4. **Verify Token:** `contactomedico_webhook_2026`
+4. **Verify Token:** `<WHATSAPP_WEBHOOK_TOKEN>`
 5. Clic en **Verify and Save** — Meta llama al GET, tu servidor responde con el challenge ✓
 6. Suscribir el campo **`messages`** en la sección de campos del webhook
 
