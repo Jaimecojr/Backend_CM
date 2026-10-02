@@ -32,6 +32,12 @@ class Counselor extends Model
         'user_id',
     ];
 
+    /**
+     * Legacy column from the previous system (mostly unsalted MD5). Counselors don't log in here,
+     * so the hash must never leave the API — including through eager loads like affiliate->counselor.
+     */
+    protected $hidden = ['password'];
+
     // Relationship with City
     public function city()
     {

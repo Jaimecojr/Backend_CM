@@ -16,6 +16,18 @@ class AffiliateNote extends Model
 
     protected $fillable = ['affiliate_id', 'user_id', 'body'];
 
+    /**
+     * Free text written by people (contact messages, notes about an affiliate) can carry health or
+     * personal details, which Colombian law (Ley 1581) treats as sensitive data: it is stored
+     * encrypted at rest. It is never searched with SQL, so encryption costs nothing functionally.
+     */
+    protected function casts(): array
+    {
+        return [
+            'body' => 'encrypted',
+        ];
+    }
+
     public function affiliate()
     {
         return $this->belongsTo(Affiliate::class);

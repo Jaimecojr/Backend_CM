@@ -66,10 +66,12 @@ class SettingControllerTest extends TestCase
         $this->assertDatabaseHas('settings', ['id' => $setting->id, 'wa_api_version' => 'v19.0']);
     }
 
-    public function test_update_rechaza_bearer_token_vacio(): void
+    public function test_should_reject_empty_bearer_token_when_none_is_stored_yet(): void
     {
+        // An empty token only means "keep the current one" when there is one to keep.
         $admin = User::factory()->create(['type' => 1]);
         $setting = $this->crearSetting();
+        $setting->forceFill(['wa_bearer_token' => null])->save();
 
         $response = $this->actingAs($admin)->patchJson("/api/settings/{$setting->id}", [
             'wa_api_version' => 'v19.0',

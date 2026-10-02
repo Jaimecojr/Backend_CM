@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Affiliate;
+use App\Models\AffiliateNote;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,8 +25,9 @@ class AffiliateNoteControllerTest extends TestCase
         $this->assertDatabaseHas('affiliate_notes', [
             'affiliate_id' => $affiliate->id,
             'user_id' => $user->id,
-            'body' => 'NOTA DE SEGUIMIENTO DE PRUEBA.',
         ]);
+        // `body` is encrypted at rest, so it's compared through the model, not the raw column.
+        $this->assertSame('NOTA DE SEGUIMIENTO DE PRUEBA.', AffiliateNote::first()->body);
     }
 
     public function test_store_rechaza_body_vacio(): void

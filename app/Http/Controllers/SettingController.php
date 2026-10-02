@@ -28,6 +28,10 @@ class SettingController extends Controller
         ]);
     }
 
+    /**
+     * SECURITY_REVIEW: the Meta token is write-only — never returned (Setting::$hidden), stored
+     * encrypted, and an empty value keeps the current one so the panel never has to hold it.
+     */
     public function update(Request $request, Setting $setting)
     {
         if (!$request->user()->isSuperAdmin()) {
@@ -37,7 +41,9 @@ class SettingController extends Controller
         $validator = Validator::make($request->all(), [
             'wa_api_version'               => 'required|string|max:255',
             'wa_phone_number_id'           => 'required|string|max:255',
-            'wa_bearer_token'              => 'required|string',
+            // Write-only: the panel never receives the current token, so an empty value means
+            // "keep the one already stored". It's only required when none is stored yet.
+            'wa_bearer_token'              => [filled($setting->getRawOriginal('wa_bearer_token')) ? 'nullable' : 'required', 'string'],
             'wa_template_name'             => 'required|string|max:255',
             'wa_appointment_template_name' => 'nullable|string|max:255',
         ]);
@@ -49,7 +55,13 @@ class SettingController extends Controller
             ], 422);
         }
 
-        $setting->update($validator->validated());
+        $data = $validator->validated();
+
+        if (blank($data['wa_bearer_token'] ?? null)) {
+            unset($data['wa_bearer_token']);
+        }
+
+        $setting->update($data);
 
         return response()->json([
             'message' => 'Configuración actualizada exitosamente.',

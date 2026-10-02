@@ -24,6 +24,18 @@ class Contact extends Model
         'comment',
     ];
 
+    /**
+     * Free text written by people (contact messages, notes about an affiliate) can carry health or
+     * personal details, which Colombian law (Ley 1581) treats as sensitive data: it is stored
+     * encrypted at rest. It is never searched with SQL, so encryption costs nothing functionally.
+     */
+    protected function casts(): array
+    {
+        return [
+            'comment' => 'encrypted',
+        ];
+    }
+
     public function city()
     {
         return $this->belongsTo(City::class);

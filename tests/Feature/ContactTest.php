@@ -50,8 +50,9 @@ class ContactTest extends TestCase
             'email'   => 'juan@example.com',
             'phone'   => '3001234567',
             'subject' => 'INFORMACIÓN SOBRE PLANES',
-            'comment' => 'HOLA, QUIERO INFORMACIÓN SOBRE LOS PLANES DISPONIBLES.',
         ]);
+        // `comment` is encrypted at rest, so it's compared through the model, not the raw column.
+        $this->assertSame('HOLA, QUIERO INFORMACIÓN SOBRE LOS PLANES DISPONIBLES.', Contact::first()->comment);
     }
 
     public function test_store_falla_sin_campos_requeridos(): void
