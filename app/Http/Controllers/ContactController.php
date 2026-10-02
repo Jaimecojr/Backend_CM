@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
+use App\Services\RecaptchaVerifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ContactController extends Controller
 {
-    public function store(Request $request)
+    /**
+     * Public website contact form. reCAPTCHA is checked after field validation so a human with a
+     * typo gets field errors first, and bots never get a row written.
+     */
+    public function store(Request $request, RecaptchaVerifier $recaptcha)
     {
         $validator = Validator::make($request->all(), [
             'name'    => 'required|string|max:255',
@@ -25,6 +30,13 @@ class ContactController extends Controller
             return response()->json([
                 'message' => 'Error en la validación',
                 'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        if (!$recaptcha->verify($request->input('recaptcha_token'), $request->ip())) {
+            return response()->json([
+                'message' => 'No pudimos verificar que no eres un robot. Intenta nuevamente.',
+                'errors'  => ['recaptcha_token' => ['La verificación reCAPTCHA falló.']],
             ], 422);
         }
 
@@ -45,7 +57,7 @@ class ContactController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = $request->query('per_page', 20);
+        $perPage = max(1, min((int) $request->query('per_page', 20), 100));
         $search  = $request->query('search', '');
 
         $query = Contact::with(['city:id,name'])

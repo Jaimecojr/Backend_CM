@@ -8,6 +8,7 @@ use App\Models\Affiliate;
 use App\Models\User;
 use App\Services\WhatsAppClient;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use setasign\Fpdi\Tcpdf\Fpdi;
 
 class CarnetController extends Controller
@@ -16,6 +17,12 @@ class CarnetController extends Controller
     {
     }
 
+    /**
+     * Generates the carnet PDF and sends it as a WhatsApp document template.
+     *
+     * SECURITY_REVIEW: the PDF (name, ID card, beneficiaries) must be publicly reachable for Meta to
+     * fetch it, so it gets an unguessable random name and `carnets:purge` deletes it after 7 days.
+     */
     public function send($id)
     {
         $affiliate = Affiliate::with('beneficiaries')->find($id);
@@ -39,7 +46,10 @@ class CarnetController extends Controller
         }
 
         try {
-            $filename     = "carnet_{$id}_" . time() . ".pdf";
+            // The PDF holds personal data and sits on the public disk so Meta can fetch it: the name
+            // must be unguessable (a sequential id + timestamp could be enumerated). A fresh name per
+            // send also keeps Meta from serving a cached copy of a previous carnet.
+            $filename     = 'carnet_' . Str::random(40) . '.pdf';
             $relativePath = "carnets/{$filename}";
             $absolutePath = storage_path("app/public/carnets/{$filename}");
 

@@ -32,7 +32,7 @@ class ContentAllyController extends Controller
 
         $validator = Validator::make($request->all(), [
             'image'    => 'required|image|mimes:jpeg,png,webp|max:2048',
-            'url'      => 'required|string|url|max:255',
+            'url'      => 'required|string|url:http,https|max:255',
             'position' => 'required|integer|min:1',
         ]);
 
@@ -44,8 +44,10 @@ class ContentAllyController extends Controller
         }
 
         $file = $request->file('image');
-        $filename = time() . '_' . Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('content_allies', $filename, 'public');
+        // Random name with the extension guessed from the file content, never the client-sent
+        // one: a valid PNG uploaded as "x.html" would otherwise be served as HTML from our domain.
+        $path = $file->store('content_allies', 'public');
+        $filename = basename($path);
 
         $ally = ContentAlly::create([
             'image'          => $path,
@@ -70,7 +72,7 @@ class ContentAllyController extends Controller
 
         $validator = Validator::make($request->all(), [
             'image'    => 'nullable|image|mimes:jpeg,png,webp|max:2048',
-            'url'      => 'required|string|url|max:255',
+            'url'      => 'required|string|url:http,https|max:255',
             'position' => 'required|integer|min:1',
         ]);
 
@@ -84,8 +86,10 @@ class ContentAllyController extends Controller
         if ($request->hasFile('image')) {
             Storage::disk('public')->delete($ally->image);
             $file = $request->file('image');
-            $filename = time() . '_' . Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('content_allies', $filename, 'public');
+            // Random name with the extension guessed from the file content, never the client-sent
+            // one: a valid PNG uploaded as "x.html" would otherwise be served as HTML from our domain.
+            $path = $file->store('content_allies', 'public');
+            $filename = basename($path);
             $ally->image = $path;
             $ally->image_filename = $filename;
         }

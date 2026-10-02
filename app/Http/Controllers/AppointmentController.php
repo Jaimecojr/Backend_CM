@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateAppointmentRequest;
 use App\Models\Appointment;
 use App\Services\WhatsAppClient;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AppointmentController extends Controller
@@ -19,7 +20,7 @@ class AppointmentController extends Controller
 
     public function index(Request $request)
     {
-        $perPage = (int) $request->get('per_page', 20);
+        $perPage = max(1, min((int) $request->get('per_page', 20), 100));
         $search  = trim((string) $request->get('search', ''));
         $date    = trim((string) $request->get('date', ''));
         $period  = trim((string) $request->get('period', 'pending'));
@@ -91,9 +92,12 @@ class AppointmentController extends Controller
         //
     }
 
+    /**
+     * Persists first and notifies by WhatsApp afterwards, so a failed send never loses the booking.
+     */
     public function store(StoreAppointmentRequest $request)
     {
-        $appointment = Appointment::create($request->validated());
+        $appointment = Appointment::create($this->withOwner($request->validated()));
 
         $whatsapp = $this->sendWhatsAppNotification($appointment);
 
@@ -104,8 +108,15 @@ class AppointmentController extends Controller
         ], 201);
     }
 
+    /**
+     * Resolves `owner` (holder or beneficiary) here because the frontend shouldn't know the `type` rule.
+     */
     public function show(Appointment $appointment)
     {
+        if ($denied = $this->denyUnlessOwner($appointment)) {
+            return $denied;
+        }
+
         $appointment->load([
             'doctor:id,name,lastname,specialty_id',
             'city:id,name',
@@ -127,9 +138,16 @@ class AppointmentController extends Controller
         ]);
     }
 
+    /**
+     * Re-sends the WhatsApp confirmation because date, hour or place may have changed.
+     */
     public function update(UpdateAppointmentRequest $request, Appointment $appointment)
     {
-        $appointment->update($request->validated());
+        if ($denied = $this->denyUnlessOwner($appointment)) {
+            return $denied;
+        }
+
+        $appointment->update($this->withOwner($request->validated()));
 
         $whatsapp = $this->sendWhatsAppNotification($appointment);
 
@@ -140,13 +158,53 @@ class AppointmentController extends Controller
         ]);
     }
 
+    /**
+     * Hard delete: appointments have no status field, a cancelled booking simply stops existing.
+     */
     public function destroy(Appointment $appointment)
     {
+        if ($denied = $this->denyUnlessOwner($appointment)) {
+            return $denied;
+        }
+
         $appointment->delete();
 
         return response()->json([
             'message' => 'Cita eliminada correctamente.',
         ]);
+    }
+
+    /**
+     * Appointments belong to the franchise that created them: index() and today() already list
+     * only the user's own, so reading or changing someone else's by id must be refused too.
+     */
+    private function denyUnlessOwner(Appointment $appointment): ?JsonResponse
+    {
+        $user = auth()->user();
+
+        if ($user->isSuperAdmin() || (int) $appointment->user_id === $user->id) {
+            return null;
+        }
+
+        return response()->json(['message' => 'No autorizado'], 403);
+    }
+
+    /**
+     * Only the super admin may attribute an appointment to another franchise; for everyone else
+     * the owner is always the authenticated user, whatever `user_id` the request carried.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withOwner(array $data): array
+    {
+        $user = auth()->user();
+
+        if (!$user->isSuperAdmin()) {
+            $data['user_id'] = $user->id;
+        }
+
+        return $data;
     }
 
     public function today()

@@ -51,7 +51,7 @@ class AgreementControllerTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_destroy_no_requiere_super_admin(): void
+    public function test_should_return_403_when_non_admin_deletes_an_agreement(): void
     {
         $admin = User::factory()->create(['type' => 1]);
         $created = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
@@ -60,7 +60,8 @@ class AgreementControllerTest extends TestCase
         $asesor = User::factory()->create(['type' => 3]);
         $response = $this->actingAs($asesor)->deleteJson("/api/agreements/{$id}");
 
-        $response->assertStatus(200);
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('agreements', ['id' => $id]);
     }
 
     public function test_destroy_registra_regist_action_de_borrado(): void
@@ -69,14 +70,13 @@ class AgreementControllerTest extends TestCase
         $created = $this->actingAs($admin)->postJson('/api/agreements', $this->payloadValido());
         $id = $created->json('data.id');
 
-        $asesor = User::factory()->create(['type' => 3]);
-        $this->actingAs($asesor)->deleteJson("/api/agreements/{$id}");
+        $this->actingAs($admin)->deleteJson("/api/agreements/{$id}");
 
         $this->assertDatabaseHas('regist_actions', [
             'action_type'  => 'D',
             'target_table' => 'agreements',
             'table_id'     => $id,
-            'user_id'      => $asesor->id,
+            'user_id'      => $admin->id,
         ]);
     }
 

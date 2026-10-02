@@ -7,6 +7,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rules\Password;
 
 class StoreUserRequest extends FormRequest
 {
@@ -27,7 +28,7 @@ class StoreUserRequest extends FormRequest
             'date_afi' => 'nullable|date',
             'email' => 'required|email|unique:users,email',
             'user' => 'required|string|max:100|unique:users,user',
-            'password' => 'required|string|min:6',
+            'password' => ['required', 'string', Password::min(8)->letters()->numbers()],
             'state' => 'nullable|in:1,2',
             'city_id' => 'required|exists:cities,id',
             'type' => 'nullable|in:1,2,3',

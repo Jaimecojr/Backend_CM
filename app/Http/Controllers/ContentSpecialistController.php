@@ -45,8 +45,10 @@ class ContentSpecialistController extends Controller
         }
 
         $file = $request->file('photo');
-        $filename = time() . '_' . Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('content_specialists', $filename, 'public');
+        // Random name with the extension guessed from the file content, never the client-sent
+        // one: a valid PNG uploaded as "x.html" would otherwise be served as HTML from our domain.
+        $path = $file->store('content_specialists', 'public');
+        $filename = basename($path);
 
         $specialist = ContentSpecialist::create([
             'name'           => $request->name,
@@ -87,8 +89,10 @@ class ContentSpecialistController extends Controller
         if ($request->hasFile('photo')) {
             Storage::disk('public')->delete($specialist->photo);
             $file = $request->file('photo');
-            $filename = time() . '_' . Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('content_specialists', $filename, 'public');
+            // Random name with the extension guessed from the file content, never the client-sent
+            // one: a valid PNG uploaded as "x.html" would otherwise be served as HTML from our domain.
+            $path = $file->store('content_specialists', 'public');
+            $filename = basename($path);
             $specialist->photo = $path;
             $specialist->photo_filename = $filename;
         }

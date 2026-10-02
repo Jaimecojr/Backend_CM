@@ -12,7 +12,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_store_crea_franquicia_con_type_por_defecto(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $cityId = User::factory()->create()->city_id;
 
         $response = $this->actingAs($admin)->postJson('/api/users', [
@@ -30,7 +30,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_store_retorna_400_no_422_en_validacion_fallida(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
 
         $response = $this->actingAs($admin)->postJson('/api/users', []);
 
@@ -39,7 +39,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_store_rechaza_nit_duplicado(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $existing = User::factory()->create(['nit' => '1112223334']);
 
         $response = $this->actingAs($admin)->postJson('/api/users', [
@@ -57,7 +57,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_store_rechaza_movil_invalido(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $cityId = User::factory()->create()->city_id;
 
         $response = $this->actingAs($admin)->postJson('/api/users', [
@@ -76,7 +76,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_update_permite_edicion_parcial(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $franchise = User::factory()->create();
 
         $response = $this->actingAs($admin)->patchJson("/api/users/{$franchise->id}", [
@@ -89,7 +89,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_destroy_elimina_la_franquicia(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $franchise = User::factory()->create();
 
         $response = $this->actingAs($admin)->deleteJson("/api/users/{$franchise->id}");
@@ -100,7 +100,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_destroy_registra_regist_action_de_borrado(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $franchise = User::factory()->create();
 
         $this->actingAs($admin)->deleteJson("/api/users/{$franchise->id}");
@@ -115,7 +115,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_index_lista_franquicias(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         User::factory()->count(2)->create();
 
         $response = $this->actingAs($admin)->getJson('/api/users');
@@ -125,7 +125,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_active_franchises_retorna_solo_activas(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         User::factory()->create(['state' => 1]);
         User::factory()->create(['state' => 0]);
 
@@ -136,7 +136,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_store_registra_regist_action_de_creacion(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $cityId = User::factory()->create()->city_id;
 
         $response = $this->actingAs($admin)->postJson('/api/users', [
@@ -159,7 +159,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_update_de_state_registra_action_type_e(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $franquicia = User::factory()->create(['state' => 1]);
 
         $this->actingAs($admin)->patchJson("/api/users/{$franquicia->id}", ['state' => 2]);
@@ -174,7 +174,7 @@ class UserControllerCrudTest extends TestCase
 
     public function test_update_sin_cambiar_state_registra_action_type_u(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['type' => 1]);
         $franquicia = User::factory()->create(['state' => 1, 'phone' => '6041110000']);
 
         $this->actingAs($admin)->patchJson("/api/users/{$franquicia->id}", ['phone' => '6042223333']);

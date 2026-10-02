@@ -7,6 +7,7 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rules\Password;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -32,7 +33,7 @@ class UpdateUserRequest extends FormRequest
             'date_afi' => 'nullable|date',
             'email' => 'nullable|email|unique:users,email,' . $id,
             'user' => 'nullable|string|max:100|unique:users,user,' . $id,
-            'password' => 'nullable|string|min:6',
+            'password' => ['nullable', 'string', Password::min(8)->letters()->numbers()],
             'state' => 'nullable|in:1,2',
             'city_id' => 'nullable|exists:cities,id',
             'type' => 'nullable|in:1,2,3',

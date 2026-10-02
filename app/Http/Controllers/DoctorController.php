@@ -21,7 +21,7 @@ class DoctorController extends Controller
      */
     public function index(Request $request)
     {
-        $perPage = $request->query('per_page', 20);
+        $perPage = max(1, min((int) $request->query('per_page', 20), 100));
         $search = $request->query('search', '');
         $state = $request->query('state', '');
 

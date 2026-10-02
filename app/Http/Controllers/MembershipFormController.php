@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\MembershipForm;
+use App\Services\RecaptchaVerifier;
 use App\Models\MembershipFormBeneficiary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +14,7 @@ class MembershipFormController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = $request->query('per_page', 20);
+        $perPage = max(1, min((int) $request->query('per_page', 20), 100));
         $search  = $request->query('search', '');
 
         $query = MembershipForm::with(['city:id,name'])
@@ -91,7 +92,11 @@ class MembershipFormController extends Controller
         ], 200);
     }
 
-    public function store(Request $request)
+    /**
+     * Public website affiliation request. reCAPTCHA is checked after field validation so a human
+     * with a typo gets field errors first, and bots never get a row written.
+     */
+    public function store(Request $request, RecaptchaVerifier $recaptcha)
     {
         $validator = Validator::make($request->all(), [
             'name'            => 'required|string|max:255',
@@ -112,6 +117,13 @@ class MembershipFormController extends Controller
             return response()->json([
                 'message' => 'Error en la validación',
                 'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        if (!$recaptcha->verify($request->input('recaptcha_token'), $request->ip())) {
+            return response()->json([
+                'message' => 'No pudimos verificar que no eres un robot. Intenta nuevamente.',
+                'errors'  => ['recaptcha_token' => ['La verificación reCAPTCHA falló.']],
             ], 422);
         }
 

@@ -11,6 +11,7 @@ use App\Services\RegistActionLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -89,10 +90,22 @@ class UserController extends Controller
     }
 
     /**
-     * Update an existing user
+     * Shared by the franchise admin screen (super admin) and "Mi cuenta" (any user, own record).
+     *
+     * SECURITY_REVIEW: non-admins can only target their own id and can never set type, state or
+     * password here — otherwise any franchise could promote itself or take over the admin account.
      */
     public function update(UpdateUserRequest $request, $id)
     {
+        $authUser = $request->user();
+        $isSuperAdmin = $authUser->isSuperAdmin();
+
+        // A non-admin may only edit their own record (the "Mi cuenta" screen) — never another
+        // franchise or the super admin account.
+        if (!$isSuperAdmin && (int) $id !== $authUser->id) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {
@@ -105,6 +118,9 @@ class UserController extends Controller
         // instead of $request->validated() to preserve exactly the original
         // semantics: a field is only assigned if it comes "filled" (not null, not ''),
         // it is not enough for the key to just exist in the validated array.
+        // `password`, `state` and `type` are privileged: a non-admin sending them is ignored (same
+        // pattern as `stade` on affiliates) so they can't promote themselves to super admin. Their
+        // own password goes through change-password, which requires the current one.
         if ($request->filled('nit'))
             $user->nit = $request->nit;
         if ($request->filled('name'))
@@ -123,13 +139,13 @@ class UserController extends Controller
             $user->email = $request->email;
         if ($request->filled('user'))
             $user->user = $request->user;
-        if ($request->filled('password'))
+        if ($request->filled('password') && $isSuperAdmin)
             $user->password = Hash::make($request->password);
-        if ($request->filled('state'))
+        if ($request->filled('state') && $isSuperAdmin)
             $user->state = $request->state;
         if ($request->filled('city_id'))
             $user->city_id = $request->city_id;
-        if ($request->filled('type'))
+        if ($request->filled('type') && $isSuperAdmin)
             $user->type = $request->type;
 
         $user->save();
@@ -169,7 +185,8 @@ class UserController extends Controller
     }
 
     /**
-     * Change the authenticated user's password
+     * Requires the current password so a hijacked session alone can't lock the owner out.
+     * Rate limited by route (throttle:5,1) to stop guessing the current password.
      */
     public function changePassword(Request $request)
     {
@@ -177,7 +194,7 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'current_password' => 'required|string',
-            'new_password'     => 'required|string|min:6',
+            'new_password'     => ['required', 'string', Password::min(8)->letters()->numbers()],
         ]);
 
         if ($validator->fails()) {

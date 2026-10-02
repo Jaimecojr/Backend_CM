@@ -134,8 +134,11 @@ class AffiliateController extends Controller
         // together with other fields as part of the same request: instead of
         // rejecting the whole update with 403, `stade` is silently dropped for
         // non-super-admins and the rest of the fields are still persisted.
+        // The owning franchise (`user_id`) follows the same rule: affiliates are shared across
+        // franchises for day-to-day processes, but only the super admin may reassign one.
         if (!$request->user()->isSuperAdmin()) {
             $excludedFields[] = 'stade';
+            $excludedFields[] = 'user_id';
         }
 
         $affiliate->update(Arr::except($request->validated(), $excludedFields));
@@ -291,6 +294,10 @@ class AffiliateController extends Controller
                 'message' => 'No encontramos un grupo familiar con esa cédula.',
             ], 404);
         }
+
+        // Internal ids are only needed to load the relation; the public site never needs them.
+        $affiliate->makeHidden('id');
+        $affiliate->beneficiaries->each->makeHidden(['id', 'affiliate_id']);
 
         return response()->json([
             'success' => true,

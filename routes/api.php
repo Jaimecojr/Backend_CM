@@ -27,7 +27,7 @@ use App\Http\Controllers\ReportExportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware(['auth:sanctum', 'active']);
 
 // Rutas públicas — solo lectura, campos seguros, para el sitio web
 Route::prefix('public')->group(function () {
@@ -35,10 +35,12 @@ Route::prefix('public')->group(function () {
     Route::get('specialties', [SpecialtyController::class, 'publicIndex']);
     Route::get('departments', [DepartmentController::class, 'index']);
     Route::get('departments/{department}/cities', [CityController::class, 'getByDepartment']);
-    Route::post('affiliate-request', [MembershipFormController::class, 'store']);
+    Route::post('affiliate-request', [MembershipFormController::class, 'store'])
+        ->middleware('throttle:public-forms');
     Route::post('affiliate-status', [AffiliateController::class, 'publicStatus'])
         ->middleware('throttle:10,1'); // 10 consultas por minuto por IP — evita cosecha masiva de PII
-    Route::post('contact', [ContactController::class, 'store']);
+    Route::post('contact', [ContactController::class, 'store'])
+        ->middleware('throttle:public-forms');
     Route::get('content-allies', [ContentAllyController::class, 'publicIndex']);
     Route::get('content-specialists', [ContentSpecialistController::class, 'publicIndex']);
     Route::get('franchises', [UserController::class, 'publicActiveFranchises']);
@@ -50,12 +52,15 @@ Route::prefix('webhook')->group(function () {
     Route::post('whatsapp', [WhatsAppWebhookController::class, 'handle']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
-    // Usuarios - Franquicias
+    // Users / franchises. Create and delete are super-admin only; update() also lets each user edit
+    // their own record (the "Mi cuenta" screen), with the restrictions enforced in the controller.
     Route::get('users/active', [UserController::class, 'activeFranchises']);
-    Route::apiResource('users', UserController::class);
-    Route::post('user/change-password', [UserController::class, 'changePassword']);
+    Route::apiResource('users', UserController::class)->only(['index', 'show', 'update']);
+    Route::apiResource('users', UserController::class)->only(['store', 'destroy'])->middleware('super-admin');
+    Route::post('user/change-password', [UserController::class, 'changePassword'])
+        ->middleware('throttle:5,1');
 
     //Vendedores
     Route::get('counselors/active', [CounselorController::class, 'activeCounselors']);
@@ -64,7 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Convenios
     Route::get('agreements/active', [AgreementController::class, 'activeAgreements']);
-    Route::apiResource('agreements', AgreementController::class);
+    Route::apiResource('agreements', AgreementController::class)->except(['destroy']);
+    Route::delete('agreements/{agreement}', [AgreementController::class, 'destroy'])->middleware('super-admin');
 
     //Afiliados / Usuarios
     Route::get('affiliates/check-id-card',   [AffiliateController::class, 'checkIdCard']);
@@ -84,7 +90,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('renovations', RenovationController::class)->only(['index', 'store', 'show']);
 
     // Especialidades
-    Route::apiResource('specialties', SpecialtyController::class);
+    Route::apiResource('specialties', SpecialtyController::class)->except(['destroy']);
+    Route::delete('specialties/{specialty}', [SpecialtyController::class, 'destroy'])->middleware('super-admin');
 
     // Médicos
     Route::get('doctors/by-specialty', [DoctorController::class, 'bySpecialty']);
@@ -115,13 +122,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Mensajes de contacto
     Route::apiResource('contacts', ContactController::class)->only(['index', 'show', 'destroy']);
 
-    // Administración de contenido — Aliados estratégicos
-    Route::put('content-allies/reorder', [ContentAllyController::class, 'reorder']);
-    Route::apiResource('content-allies', ContentAllyController::class)->except(['show']);
+    // Public website content: only the super admin may change what visitors see
+    Route::middleware('super-admin')->group(function () {
+        Route::put('content-allies/reorder', [ContentAllyController::class, 'reorder']);
+        Route::apiResource('content-allies', ContentAllyController::class)->except(['show']);
 
-    // Administración de contenido — Especialistas de la salud
-    Route::put('content-specialists/reorder', [ContentSpecialistController::class, 'reorder']);
-    Route::apiResource('content-specialists', ContentSpecialistController::class)->except(['show']);
+        Route::put('content-specialists/reorder', [ContentSpecialistController::class, 'reorder']);
+        Route::apiResource('content-specialists', ContentSpecialistController::class)->except(['show']);
+    });
 
     // Reportes
     Route::prefix('reports')->group(function () {
