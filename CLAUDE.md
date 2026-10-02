@@ -578,8 +578,10 @@ directamente. Toda restricción de rol vive en el backend.
   y HSTS en producción sobre HTTPS.
 - **Producción:** `URL::forceScheme('https')`. Defaults de `config/session.php`: driver `file`
   (no `cookie`), `domain` null, `secure` true si `APP_ENV=production`.
-- **Secretos de test:** `phpunit.xml`/`.env.testing` solo llevan valores de relleno (`APP_KEY`
-  propio de tests, `test-webhook-token`). Nunca copiar ahí valores del `.env` real.
+- **Secretos de test:** `phpunit.xml`/`.env.testing` **no llevan `APP_KEY`**: `tests/TestCase.php`
+  genera una aleatoria en memoria en cada corrida (o usa la del entorno, p. ej. en CI). Incluso una
+  clave solo-de-tests commiteada dispara a GitGuardian. El resto son valores de relleno
+  (`test-webhook-token`); nunca copiar ahí valores del `.env` real.
 
 ## Reglas Generales
 1. **Idioma:** El código en sí —comentarios, PHPDoc, nombres de métodos, propiedades y variables— debe estar en **inglés**, siguiendo la convención estándar de desarrollo (esto revierte la regla anterior de este documento). Los strings de respuesta JSON y mensajes de validación que ve el usuario final del panel siguen en **español** — son producto, no código, y el panel es para asesores/franquicias colombianas. Los comentarios de código no deben referenciar `CLAUDE.md` ni otros documentos internos por nombre; deben ser autocontenidos y explicar el WHY directamente.
