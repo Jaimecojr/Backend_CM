@@ -10,14 +10,25 @@ use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends Controller
 {
+    /**
+     * Session login for the Sanctum SPA. Rate limited per username+IP (`throttle:login`).
+     *
+     * SECURITY_REVIEW: one generic error for wrong password, unknown user and inactive user (no
+     * account enumeration); the session id is regenerated to prevent fixation; legacy MD5 hashes
+     * are upgraded to bcrypt on success by the session guard.
+     */
     public function login(Request $request)
     {
         $request->validate([
-            'user'     => 'required',
-            'password' => 'required',
+            'user'     => 'required|string|max:100',
+            'password' => 'required|string|max:255',
         ]);
 
-        if (!Auth::attempt($request->only('user', 'password'))) {
+        // `state = 1` keeps deactivated franchises out. The response is the same generic message
+        // as a wrong password so the endpoint doesn't reveal which accounts exist or are disabled.
+        $credentials = [...$request->only('user', 'password'), 'state' => 1];
+
+        if (!Auth::attempt($credentials)) {
             return response()->json(['message' => 'Credenciales inválidas'], 422);
         }
 

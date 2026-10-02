@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,8 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // 👇 ESTA ES LA ÚNICA LÍNEA QUE NECESITAS PARA SANCTUM SPA
+        // Sanctum SPA: cookie-based session auth for requests coming from the frontend domain.
         $middleware->statefulApi();
+
+        // Global per-user/IP limit for the whole API (limiter defined in AppServiceProvider).
+        $middleware->throttleApi();
+
+        $middleware->append(SecurityHeaders::class);
+
+        $middleware->alias([
+            'super-admin' => EnsureSuperAdmin::class,
+            'active'      => EnsureUserIsActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
